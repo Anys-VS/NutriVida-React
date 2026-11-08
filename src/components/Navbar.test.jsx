@@ -6,10 +6,12 @@ import { SesionProvider } from '../context/SesionContext'
 import { CarritoProvider } from '../context/CarritoContext'
 import { ROL } from '../config/reglas'
 import { crearLocalStorageFalso } from '../test/localStorageFalso'
+import { guardarTokens } from '../auth/almacenTokens'
+import { emitirTokens } from '../auth/servidorLocal'
 
-// Deja una sesión guardada (como si el usuario ya hubiera iniciado sesión) y dibuja el menú.
-function dibujarCon(sesion, carrito = []) {
-  if (sesion) localStorage.setItem('nutrivida_sesion', JSON.stringify(sesion))
+// Deja tokens guardados (como si el usuario ya hubiera iniciado sesión) y dibuja el menú.
+function dibujarCon(usuario, carrito = []) {
+  if (usuario) guardarTokens(emitirTokens(usuario))
   localStorage.setItem('nutrivida_carrito', JSON.stringify(carrito))
   return render(
     <MemoryRouter initialEntries={['/']}>
@@ -22,21 +24,25 @@ function dibujarCon(sesion, carrito = []) {
   )
 }
 
-const paciente = { run: '195556660', correo: 'paciente@gmail.com', nombre: 'Javiera', tipoUsuario: ROL.PACIENTE }
-const nutricionista = { run: '151112226', correo: 'carolina.fuentes@nutrivida.cl', nombre: 'Carolina', tipoUsuario: ROL.NUTRICIONISTA }
+const paciente = { run: '195556660', correo: 'paciente@gmail.com', nombre: 'Javiera', apellidos: 'Soto', tipoUsuario: ROL.PACIENTE }
+const nutricionista = { run: '151112226', correo: 'carolina.fuentes@nutrivida.cl', nombre: 'Carolina', apellidos: 'Fuentes', tipoUsuario: ROL.NUTRICIONISTA }
 
 describe('Navbar', () => {
-  beforeEach(() => vi.stubGlobal('localStorage', crearLocalStorageFalso()))
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', crearLocalStorageFalso())
+    sessionStorage.clear()
+  })
   afterEach(() => vi.unstubAllGlobals())
 
-  // Prueba 45: un visitante ve "Ingresar", el carrito vacío y el botón para agendar
-  it('muestra a un visitante el acceso, el carrito y "Agendar hora"', () => {
+  // Prueba 45: sin sesión, el menú muestra solo lo público (Inicio y Servicios) y el acceso
+  it('muestra a un visitante solo las páginas públicas, "Ingresar" y "Crear cuenta"', () => {
     dibujarCon(null)
 
     expect(screen.getByRole('link', { name: 'Ingresar' })).toHaveAttribute('href', '/login')
-    // Hay dos enlaces (barra de celular y menú de escritorio); el CSS muestra uno según el ancho.
-    expect(screen.getAllByRole('link', { name: 'Carrito, 0 ítem(s)' })).toHaveLength(2)
-    expect(screen.getByRole('link', { name: 'Agendar hora' })).toHaveAttribute('href', '/reservar')
+    expect(screen.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute('href', '/registro')
+    expect(screen.getByRole('link', { name: 'Servicios' })).toHaveAttribute('href', '/servicios')
+    expect(screen.queryByRole('link', { name: 'Especialistas' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Carrito/ })).not.toBeInTheDocument()
   })
 
   // Prueba 46: el paciente ve su nombre, el contador del carrito y su menú; Escape lo cierra
@@ -47,6 +53,8 @@ describe('Navbar', () => {
       { id: 'b', pacienteCorreo: 'otra@gmail.com', fechaHora: '2026-11-20T11:00:00' },
     ])
 
+    // Dos enlaces al carrito (barra de celular y menú de escritorio); el CSS muestra uno según el ancho.
+    expect(screen.getAllByRole('link', { name: 'Carrito, 1 ítem(s)' })).toHaveLength(2)
     expect(screen.getAllByRole('link', { name: 'Carrito, 1 ítem(s)' })[0]).toHaveTextContent('1')
     expect(screen.queryByRole('link', { name: 'Ingresar' })).not.toBeInTheDocument()
 

@@ -1,7 +1,7 @@
-import { Routes, Route } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import { Outlet, Routes, Route } from 'react-router-dom'
 import LayoutPublico from './layouts/LayoutPublico'
-import LayoutAdmin from './layouts/LayoutAdmin'
-import { ROL } from './config/reglas'
+import { rutaInicialPorRol } from './services/auth'
 import RutaProtegida from './components/RutaProtegida'
 import Inicio from './pages/Inicio'
 import Servicios from './pages/Servicios'
@@ -21,69 +21,79 @@ import Nosotros from './pages/Nosotros'
 import Contacto from './pages/Contacto'
 import Blog from './pages/Blog'
 import ArticuloBlog from './pages/ArticuloBlog'
-import Dashboard from './pages/admin/Dashboard'
-import AdminCitas from './pages/admin/AdminCitas'
-import AdminServicios from './pages/admin/AdminServicios'
-import AdminUsuarios from './pages/admin/AdminUsuarios'
-import AdminCategorias from './pages/admin/AdminCategorias'
-import Criticos from './pages/admin/Criticos'
-import Reportes from './pages/admin/Reportes'
-import AdminPlanes from './pages/admin/AdminPlanes'
-import Perfil from './pages/admin/Perfil'
-import Historial from './pages/admin/Historial'
-import Agenda from './pages/admin/Agenda'
-import Pacientes from './pages/admin/Pacientes'
-import FichaPaciente from './pages/admin/FichaPaciente'
 import Carrito from './pages/Carrito'
 import OrdenConfirmada from './pages/OrdenConfirmada'
 import Especialistas from './pages/Especialistas'
 import MiProgreso from './pages/MiProgreso'
 
-const SOLO_PACIENTE = [ROL.PACIENTE]
-const SOLO_ADMIN = [ROL.ADMIN]
-const PERSONAL = [ROL.ADMIN, ROL.RECEPCION]
+// El panel interno se descarga solo cuando alguien del personal entra (los pacientes no lo bajan).
+const LayoutAdmin = lazy(() => import('./layouts/LayoutAdmin'))
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'))
+const AdminCitas = lazy(() => import('./pages/admin/AdminCitas'))
+const AdminServicios = lazy(() => import('./pages/admin/AdminServicios'))
+const AdminUsuarios = lazy(() => import('./pages/admin/AdminUsuarios'))
+const AdminCategorias = lazy(() => import('./pages/admin/AdminCategorias'))
+const Criticos = lazy(() => import('./pages/admin/Criticos'))
+const Reportes = lazy(() => import('./pages/admin/Reportes'))
+const AdminPlanes = lazy(() => import('./pages/admin/AdminPlanes'))
+const Perfil = lazy(() => import('./pages/admin/Perfil'))
+const Historial = lazy(() => import('./pages/admin/Historial'))
+const Agenda = lazy(() => import('./pages/admin/Agenda'))
+const Pacientes = lazy(() => import('./pages/admin/Pacientes'))
+const FichaPaciente = lazy(() => import('./pages/admin/FichaPaciente'))
+
+// Cada ruta privada declara el permiso que necesita (ver config/permisos.js).
+const protegida = (permiso, pagina) => <RutaProtegida permiso={permiso}>{pagina}</RutaProtegida>
 
 function AppRoutes() {
   return (
     <Routes>
       <Route element={<LayoutPublico />}>
+        {/* Páginas públicas: acceso, registro y la presentación de la clínica (inicio y catálogo de servicios).
+            El caso pide que solo login y registro sean públicos; la portada y el catálogo se dejan abiertos
+            para que un visitante conozca la clínica antes de crear su cuenta (decisión justificada en el ERS). */}
+        <Route path="login" element={<Login />} />
+        <Route path="registro" element={<Registro />} />
         <Route index element={<Inicio />} />
         <Route path="servicios" element={<Servicios />} />
         <Route path="servicio/:codigo" element={<DetalleServicio />} />
-        <Route path="categorias" element={<Categorias />} />
-        <Route path="categoria/:slug" element={<Categoria />} />
-        <Route path="ofertas" element={<Ofertas />} />
-        <Route path="nosotros" element={<Nosotros />} />
-        <Route path="contacto" element={<Contacto />} />
-        <Route path="blog" element={<Blog />} />
-        <Route path="blog/:id" element={<ArticuloBlog />} />
-        <Route path="reservar" element={<Reservar />} />
-        <Route path="checkout" element={<RutaProtegida><Checkout /></RutaProtegida>} />
-        <Route path="reserva-confirmada/:id" element={<RutaProtegida><ReservaConfirmada /></RutaProtegida>} />
-        <Route path="pago-error" element={<PagoError />} />
-        <Route path="login" element={<Login />} />
-        <Route path="registro" element={<Registro />} />
-        <Route path="especialistas" element={<Especialistas />} />
-        <Route path="mis-citas" element={<RutaProtegida roles={SOLO_PACIENTE}><MisCitas /></RutaProtegida>} />
-        <Route path="mi-progreso" element={<RutaProtegida roles={SOLO_PACIENTE}><MiProgreso /></RutaProtegida>} />
-        <Route path="carrito" element={<RutaProtegida roles={SOLO_PACIENTE}><Carrito /></RutaProtegida>} />
-        <Route path="orden/:id" element={<RutaProtegida roles={SOLO_PACIENTE}><OrdenConfirmada /></RutaProtegida>} />
-        <Route path="*" element={<Proximamente />} />
+
+        {/* Todo lo demás exige sesión; algunas rutas además exigen un permiso del rol. */}
+        <Route element={<RutaProtegida><Outlet /></RutaProtegida>}>
+          <Route path="categorias" element={<Categorias />} />
+          <Route path="categoria/:slug" element={<Categoria />} />
+          <Route path="ofertas" element={<Ofertas />} />
+          <Route path="nosotros" element={<Nosotros />} />
+          <Route path="contacto" element={<Contacto />} />
+          <Route path="blog" element={<Blog />} />
+          <Route path="blog/:id" element={<ArticuloBlog />} />
+          <Route path="reservar" element={<Reservar />} />
+          <Route path="checkout" element={protegida('reservas:propias', <Checkout />)} />
+          <Route path="reserva-confirmada/:id" element={protegida('reservas:propias', <ReservaConfirmada />)} />
+          <Route path="pago-error" element={<PagoError />} />
+          <Route path="especialistas" element={<Especialistas />} />
+          <Route path="mis-citas" element={protegida('reservas:propias', <MisCitas />)} />
+          <Route path="mi-progreso" element={protegida('reservas:propias', <MiProgreso />)} />
+          <Route path="carrito" element={protegida('reservas:propias', <Carrito />)} />
+          <Route path="orden/:id" element={protegida('reservas:propias', <OrdenConfirmada />)} />
+          <Route path="*" element={<Proximamente />} />
+        </Route>
       </Route>
 
-      <Route path="admin" element={<RutaProtegida roles={[ROL.ADMIN, ROL.RECEPCION, ROL.NUTRICIONISTA]}><LayoutAdmin /></RutaProtegida>}>
-        <Route index element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Dashboard /></RutaProtegida>} />
-        <Route path="citas" element={<RutaProtegida roles={PERSONAL} fallback="/admin/agenda"><AdminCitas /></RutaProtegida>} />
-        <Route path="agenda" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><Agenda /></RutaProtegida>} />
-        <Route path="pacientes" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><Pacientes /></RutaProtegida>} />
-        <Route path="pacientes/:run" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><FichaPaciente /></RutaProtegida>} />
-        <Route path="servicios" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminServicios /></RutaProtegida>} />
-        <Route path="categorias" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminCategorias /></RutaProtegida>} />
-        <Route path="criticos" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Criticos /></RutaProtegida>} />
-        <Route path="reportes" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Reportes /></RutaProtegida>} />
-        <Route path="planes" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminPlanes /></RutaProtegida>} />
-        <Route path="usuarios" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminUsuarios /></RutaProtegida>} />
-        <Route path="usuarios/:run/historial" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Historial /></RutaProtegida>} />
+      <Route path="admin" element={protegida('panel:acceder', <Suspense fallback={<p className="container seccion texto-ayuda" role="status">Cargando panel…</p>}><LayoutAdmin /></Suspense>)}>
+        {/* El resumen es del administrador; los demás roles del panel entran directo a su página inicial. */}
+        <Route index element={<RutaProtegida permiso="panel:resumen" redirigir={(s) => rutaInicialPorRol(s.tipoUsuario)}><Dashboard /></RutaProtegida>} />
+        <Route path="citas" element={protegida('citas:gestionar', <AdminCitas />)} />
+        <Route path="agenda" element={protegida('agenda:propia', <Agenda />)} />
+        <Route path="pacientes" element={protegida('fichas:gestionar', <Pacientes />)} />
+        <Route path="pacientes/:run" element={protegida('fichas:gestionar', <FichaPaciente />)} />
+        <Route path="servicios" element={protegida('catalogo:gestionar', <AdminServicios />)} />
+        <Route path="categorias" element={protegida('catalogo:gestionar', <AdminCategorias />)} />
+        <Route path="criticos" element={protegida('catalogo:gestionar', <Criticos />)} />
+        <Route path="reportes" element={protegida('reportes:ver', <Reportes />)} />
+        <Route path="planes" element={protegida('catalogo:gestionar', <AdminPlanes />)} />
+        <Route path="usuarios" element={protegida('usuarios:gestionar', <AdminUsuarios />)} />
+        <Route path="usuarios/:run/historial" element={protegida('usuarios:gestionar', <Historial />)} />
         <Route path="perfil" element={<Perfil />} />
       </Route>
     </Routes>

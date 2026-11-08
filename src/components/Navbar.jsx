@@ -3,13 +3,15 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSesion } from '../context/SesionContext'
 import { useCarrito } from '../context/CarritoContext'
 import { ROL } from '../config/reglas'
+import { puede } from '../config/permisos'
 import { rutaInicialPorRol } from '../services/auth'
 
 const claseEnlace = ({ isActive }) => 'nav-link' + (isActive ? ' active' : '')
 
 // Botón destacado del menú: el paciente (o visitante) agenda; el personal va a su panel.
 function accionPrincipal(sesion) {
-  if (!sesion || sesion.tipoUsuario === ROL.PACIENTE) return { ruta: '/reservar', texto: 'Agendar hora' }
+  if (!sesion) return { ruta: '/registro', texto: 'Crear cuenta' }
+  if (sesion.tipoUsuario === ROL.PACIENTE) return { ruta: '/reservar', texto: 'Agendar hora' }
   if (sesion.tipoUsuario === ROL.NUTRICIONISTA) return { ruta: rutaInicialPorRol(sesion.tipoUsuario), texto: 'Mi agenda' }
   return { ruta: rutaInicialPorRol(sesion.tipoUsuario), texto: 'Ir al panel' }
 }
@@ -37,8 +39,8 @@ function Navbar() {
   const [cuentaAbierta, setCuentaAbierta] = useState(false)
   const { sesion, cerrar } = useSesion()
   const { cantidad } = useCarrito()
-  const esPaciente = sesion?.tipoUsuario === ROL.PACIENTE
-  const verCarrito = !sesion || esPaciente
+  const esPaciente = puede(sesion, 'reservas:propias')
+  const verCarrito = esPaciente
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const refEncabezado = useRef(null)
@@ -113,13 +115,18 @@ function Navbar() {
         </button>
         <div className={`collapse navbar-collapse${abierto ? ' show' : ''}`} id="navegacionPrincipal">
           <ul className="navbar-nav ms-auto mb-2 mb-xl-0 align-items-xl-center">
+            {/* Públicas: Inicio y Servicios. El resto del sitio solo se muestra a quien inició sesión. */}
             <li className="nav-item"><NavLink className={claseEnlace} to="/" end onClick={cerrarMenu}>Inicio</NavLink></li>
-            <li className="nav-item"><NavLink className={claseEnlace} to="/nosotros" onClick={cerrarMenu}>Nosotros</NavLink></li>
             <li className="nav-item"><NavLink className={claseEnlace} to="/servicios" onClick={cerrarMenu}>Servicios</NavLink></li>
-            <li className="nav-item"><NavLink className={claseEnlace} to="/especialistas" onClick={cerrarMenu}>Especialistas</NavLink></li>
-            <li className="nav-item"><NavLink className={claseEnlace} to="/ofertas" onClick={cerrarMenu}>Ofertas</NavLink></li>
-            <li className="nav-item"><NavLink className={claseEnlace} to="/blog" onClick={cerrarMenu}>Blog</NavLink></li>
-            <li className="nav-item"><NavLink className={claseEnlace} to="/contacto" onClick={cerrarMenu}>Contacto</NavLink></li>
+            {sesion && (
+              <>
+                <li className="nav-item"><NavLink className={claseEnlace} to="/nosotros" onClick={cerrarMenu}>Nosotros</NavLink></li>
+                <li className="nav-item"><NavLink className={claseEnlace} to="/especialistas" onClick={cerrarMenu}>Especialistas</NavLink></li>
+                <li className="nav-item"><NavLink className={claseEnlace} to="/ofertas" onClick={cerrarMenu}>Ofertas</NavLink></li>
+                <li className="nav-item"><NavLink className={claseEnlace} to="/blog" onClick={cerrarMenu}>Blog</NavLink></li>
+                <li className="nav-item"><NavLink className={claseEnlace} to="/contacto" onClick={cerrarMenu}>Contacto</NavLink></li>
+              </>
+            )}
             {verCarrito && (
               <li className="nav-item d-none d-xl-block">
                 <EnlaceCarrito cantidad={cantidad} onClick={cerrarMenu} />

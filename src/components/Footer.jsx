@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useSesion } from '../context/SesionContext'
 
 function Footer() {
+  const { sesion } = useSesion()
   return (
     <footer className="pie-nv">
       <div className="container">
@@ -11,17 +13,26 @@ function Footer() {
           </div>
           <nav className="col-md-4" aria-label="Enlaces del pie de página">
             <h4>Navegación</h4>
-            <ul className="list-unstyled d-flex flex-column gap-2">
-              <li><Link to="/nosotros">Nosotros</Link></li>
-              <li><Link to="/servicios">Servicios</Link></li>
-              <li><Link to="/blog">Blog</Link></li>
-              <li><Link to="/contacto">Contacto</Link></li>
-            </ul>
+            {sesion ? (
+              <ul className="list-unstyled d-flex flex-column gap-2">
+                <li><Link to="/nosotros">Nosotros</Link></li>
+                <li><Link to="/servicios">Servicios</Link></li>
+                <li><Link to="/blog">Blog</Link></li>
+                <li><Link to="/contacto">Contacto</Link></li>
+              </ul>
+            ) : (
+              <ul className="list-unstyled d-flex flex-column gap-2">
+                <li><Link to="/servicios">Servicios</Link></li>
+                <li><Link to="/login">Iniciar sesión</Link></li>
+                <li><Link to="/registro">Crear cuenta de paciente</Link></li>
+              </ul>
+            )}
           </nav>
           <div className="col-md-4">
             <h4>Atención</h4>
             <address className="mb-0">
               Lunes a viernes · 08:00–19:00<br />
+              Sábado · 09:00–14:00<br />
               <a href="mailto:contacto@nutrivida.cl">contacto@nutrivida.cl</a>
             </address>
           </div>

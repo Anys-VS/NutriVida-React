@@ -1,15 +1,19 @@
+import { Suspense } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useSesion } from '../context/SesionContext'
 import { ROL } from '../config/reglas'
+import { puede } from '../config/permisos'
+import { rutaInicialPorRol } from '../services/auth'
 
 const claseMenu = ({ isActive }) => (isActive ? 'activo' : undefined)
 
 function LayoutAdmin() {
   const { sesion, cerrar } = useSesion()
   const navigate = useNavigate()
-  const esAdmin = sesion.tipoUsuario === ROL.ADMIN
   const esNutricionista = sesion.tipoUsuario === ROL.NUTRICIONISTA
-  const inicio = esAdmin ? '/admin' : esNutricionista ? '/admin/agenda' : '/admin/citas'
+  const inicio = rutaInicialPorRol(sesion.tipoUsuario)
+  // Cada opción del menú aparece solo si el rol tiene el permiso (la misma regla que protege la ruta).
+  const ver = (permiso) => puede(sesion, permiso)
 
   const salir = () => {
     cerrar()
@@ -35,22 +39,24 @@ function LayoutAdmin() {
             <aside className="col-lg-3">
               <nav className="menu-admin" aria-label="Menú administrativo">
                 <p className="menu-admin-titulo">{esNutricionista ? 'Mi consulta' : 'Gestión del sistema'}</p>
-                {esAdmin && <NavLink to="/admin" end className={claseMenu}>Resumen</NavLink>}
-                {esNutricionista && <NavLink to="/admin/agenda" className={claseMenu}>Mi agenda</NavLink>}
-                {esNutricionista && <NavLink to="/admin/pacientes" className={claseMenu}>Mis pacientes</NavLink>}
-                {!esNutricionista && <NavLink to="/admin/citas" className={claseMenu}>Citas</NavLink>}
-                {esAdmin && <NavLink to="/admin/planes" className={claseMenu}>Planes</NavLink>}
-                {esAdmin && <NavLink to="/admin/servicios" className={claseMenu}>Productos y servicios</NavLink>}
-                {esAdmin && <NavLink to="/admin/categorias" className={claseMenu}>Categorías</NavLink>}
-                {esAdmin && <NavLink to="/admin/criticos" className={claseMenu}>Cupos críticos</NavLink>}
-                {esAdmin && <NavLink to="/admin/reportes" className={claseMenu}>Reportes</NavLink>}
-                {esAdmin && <NavLink to="/admin/usuarios" className={claseMenu}>Usuarios</NavLink>}
+                {ver('panel:resumen') && <NavLink to="/admin" end className={claseMenu}>Resumen</NavLink>}
+                {ver('agenda:propia') && <NavLink to="/admin/agenda" className={claseMenu}>Mi agenda</NavLink>}
+                {ver('fichas:gestionar') && <NavLink to="/admin/pacientes" className={claseMenu}>Mis pacientes</NavLink>}
+                {ver('citas:gestionar') && <NavLink to="/admin/citas" className={claseMenu}>Citas</NavLink>}
+                {ver('catalogo:gestionar') && <NavLink to="/admin/planes" className={claseMenu}>Planes</NavLink>}
+                {ver('catalogo:gestionar') && <NavLink to="/admin/servicios" className={claseMenu}>Productos y servicios</NavLink>}
+                {ver('catalogo:gestionar') && <NavLink to="/admin/categorias" className={claseMenu}>Categorías</NavLink>}
+                {ver('catalogo:gestionar') && <NavLink to="/admin/criticos" className={claseMenu}>Cupos críticos</NavLink>}
+                {ver('reportes:ver') && <NavLink to="/admin/reportes" className={claseMenu}>Reportes</NavLink>}
+                {ver('usuarios:gestionar') && <NavLink to="/admin/usuarios" className={claseMenu}>Usuarios</NavLink>}
                 <NavLink to="/admin/perfil" className={claseMenu}>Mi perfil</NavLink>
                 <Link to="/">Ver tienda pública</Link>
               </nav>
             </aside>
             <section className="col-lg-9">
-              <Outlet />
+              <Suspense fallback={<p className="texto-ayuda" role="status">Cargando…</p>}>
+                <Outlet />
+              </Suspense>
             </section>
           </div>
         </div>
