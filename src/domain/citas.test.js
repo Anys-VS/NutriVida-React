@@ -22,14 +22,14 @@ describe('evaluarReserva', () => {
 })
 
 describe('horariosDisponibles', () => {
-  // Prueba 21: RN-08 y RN-14
+  // Prueba 21: RN-08 y RN-14 (11-11-2026 es miércoles: Carolina atiende de 09:00 a 17:00)
   it('marca como no disponibles los horarios muy próximos y los ya ocupados', () => {
-    const ahora = new Date('2026-11-10T09:00:00')
+    const ahora = new Date('2026-11-11T09:00:00')
     const servicio = { codigo: 'CN001' }
-    const ocupada = { nutricionista: 'Carolina Fuentes', estadoCita: ESTADO_CITA.CONFIRMADA, fechaHora: new Date('2026-11-10T14:00:00').toISOString() }
+    const ocupada = { nutricionista: 'Carolina Fuentes', estadoCita: ESTADO_CITA.CONFIRMADA, fechaHora: new Date('2026-11-11T14:00:00').toISOString() }
 
     const horarios = horariosDisponibles({
-      servicio, nutricionista: 'Carolina Fuentes', fecha: '2026-11-10', citas: [ocupada], ahora,
+      servicio, nutricionista: 'Carolina Fuentes', fecha: '2026-11-11', citas: [ocupada], ahora,
     })
     const estado = (hora) => horarios.find((h) => h.hora === hora)
 

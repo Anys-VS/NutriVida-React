@@ -5,7 +5,7 @@ import { hayErrores, procesarPagoSimulado, validarTarjeta } from '../domain/pago
 const VACIA = { titular: '', numero: '', vencimiento: '', cvv: '' }
 
 // Pago online de una cita ya reservada (RN-05: "Pagar ahora").
-function PagoEnLinea({ onPagado, onCancelar }) {
+function PagoEnLinea({ onPagado, onCancelar, textoBoton = 'Pagar ahora' }) {
   const [tarjeta, setTarjeta] = useState(VACIA)
   const [errores, setErrores] = useState(VACIA)
   const [errorPago, setErrorPago] = useState('')
@@ -29,7 +29,7 @@ function PagoEnLinea({ onPagado, onCancelar }) {
       <CamposTarjeta valores={tarjeta} errores={errores} onChange={setTarjeta} />
       {errorPago && <div role="alert" className="alert alert-danger">{errorPago}</div>}
       <div className="d-flex gap-2">
-        <button type="submit" className="btn btn-nv-primario btn-sm">Pagar ahora</button>
+        <button type="submit" className="btn btn-nv-primario btn-sm">{textoBoton}</button>
         <button type="button" className="btn btn-nv-secundario btn-sm" onClick={onCancelar}>Cerrar</button>
       </div>
     </form>

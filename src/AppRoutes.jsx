@@ -31,6 +31,17 @@ import Reportes from './pages/admin/Reportes'
 import AdminPlanes from './pages/admin/AdminPlanes'
 import Perfil from './pages/admin/Perfil'
 import Historial from './pages/admin/Historial'
+import Agenda from './pages/admin/Agenda'
+import Pacientes from './pages/admin/Pacientes'
+import FichaPaciente from './pages/admin/FichaPaciente'
+import Carrito from './pages/Carrito'
+import OrdenConfirmada from './pages/OrdenConfirmada'
+import Especialistas from './pages/Especialistas'
+import MiProgreso from './pages/MiProgreso'
+
+const SOLO_PACIENTE = [ROL.PACIENTE]
+const SOLO_ADMIN = [ROL.ADMIN]
+const PERSONAL = [ROL.ADMIN, ROL.RECEPCION]
 
 function AppRoutes() {
   return (
@@ -52,20 +63,27 @@ function AppRoutes() {
         <Route path="pago-error" element={<PagoError />} />
         <Route path="login" element={<Login />} />
         <Route path="registro" element={<Registro />} />
-        <Route path="mis-citas" element={<RutaProtegida><MisCitas /></RutaProtegida>} />
+        <Route path="especialistas" element={<Especialistas />} />
+        <Route path="mis-citas" element={<RutaProtegida roles={SOLO_PACIENTE}><MisCitas /></RutaProtegida>} />
+        <Route path="mi-progreso" element={<RutaProtegida roles={SOLO_PACIENTE}><MiProgreso /></RutaProtegida>} />
+        <Route path="carrito" element={<RutaProtegida roles={SOLO_PACIENTE}><Carrito /></RutaProtegida>} />
+        <Route path="orden/:id" element={<RutaProtegida roles={SOLO_PACIENTE}><OrdenConfirmada /></RutaProtegida>} />
         <Route path="*" element={<Proximamente />} />
       </Route>
 
-      <Route path="admin" element={<RutaProtegida roles={[ROL.ADMIN, ROL.RECEPCION]}><LayoutAdmin /></RutaProtegida>}>
-        <Route index element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><Dashboard /></RutaProtegida>} />
-        <Route path="citas" element={<AdminCitas />} />
-        <Route path="servicios" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><AdminServicios /></RutaProtegida>} />
-        <Route path="categorias" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><AdminCategorias /></RutaProtegida>} />
-        <Route path="criticos" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><Criticos /></RutaProtegida>} />
-        <Route path="reportes" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><Reportes /></RutaProtegida>} />
-        <Route path="planes" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><AdminPlanes /></RutaProtegida>} />
-        <Route path="usuarios" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><AdminUsuarios /></RutaProtegida>} />
-        <Route path="usuarios/:run/historial" element={<RutaProtegida roles={[ROL.ADMIN]} fallback="/admin/citas"><Historial /></RutaProtegida>} />
+      <Route path="admin" element={<RutaProtegida roles={[ROL.ADMIN, ROL.RECEPCION, ROL.NUTRICIONISTA]}><LayoutAdmin /></RutaProtegida>}>
+        <Route index element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Dashboard /></RutaProtegida>} />
+        <Route path="citas" element={<RutaProtegida roles={PERSONAL} fallback="/admin/agenda"><AdminCitas /></RutaProtegida>} />
+        <Route path="agenda" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><Agenda /></RutaProtegida>} />
+        <Route path="pacientes" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><Pacientes /></RutaProtegida>} />
+        <Route path="pacientes/:run" element={<RutaProtegida roles={[ROL.NUTRICIONISTA]} fallback="/admin/citas"><FichaPaciente /></RutaProtegida>} />
+        <Route path="servicios" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminServicios /></RutaProtegida>} />
+        <Route path="categorias" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminCategorias /></RutaProtegida>} />
+        <Route path="criticos" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Criticos /></RutaProtegida>} />
+        <Route path="reportes" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Reportes /></RutaProtegida>} />
+        <Route path="planes" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminPlanes /></RutaProtegida>} />
+        <Route path="usuarios" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><AdminUsuarios /></RutaProtegida>} />
+        <Route path="usuarios/:run/historial" element={<RutaProtegida roles={SOLO_ADMIN} fallback="/admin/citas"><Historial /></RutaProtegida>} />
         <Route path="perfil" element={<Perfil />} />
       </Route>
     </Routes>

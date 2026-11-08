@@ -2,6 +2,7 @@
 // listar, obtener, crear, actualizar, eliminar. Si la clave no existe aún, parte de una semilla.
 import { catalogoServicios } from './catalogo'
 import { usuariosSemilla } from './usuariosSemilla'
+import { fichasSemilla } from './fichasSemilla'
 import { CATEGORIAS } from '../config/reglas'
 
 export const CLAVES = {
@@ -11,6 +12,9 @@ export const CLAVES = {
   categorias: 'nutrivida_categorias',
   planes: 'nutrivida_planes',
   mensajes: 'nutrivida_mensajes',
+  carrito: 'nutrivida_carrito',
+  ordenes: 'nutrivida_ordenes',
+  fichas: 'nutrivida_fichas',
 }
 
 export function leer(clave, porDefecto) {
@@ -71,3 +75,6 @@ export const citas = crearRepositorio({ clave: CLAVES.citas, semilla: [], campoI
 export const categorias = crearRepositorio({ clave: CLAVES.categorias, semilla: CATEGORIAS, campoId: 'slug' })
 export const mensajes = crearRepositorio({ clave: CLAVES.mensajes, semilla: [], campoId: 'id' })
 export const planes = crearRepositorio({ clave: CLAVES.planes, semilla: [], campoId: 'id' })
+export const carrito = crearRepositorio({ clave: CLAVES.carrito, semilla: [], campoId: 'id' })
+export const ordenes = crearRepositorio({ clave: CLAVES.ordenes, semilla: [], campoId: 'id' })
+export const fichas = crearRepositorio({ clave: CLAVES.fichas, semilla: fichasSemilla, campoId: 'pacienteCorreo' })

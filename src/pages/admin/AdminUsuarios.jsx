@@ -6,7 +6,7 @@ import { usuarios } from '../../data/db'
 import { regionesComunas } from '../../data/regiones'
 import { ROL } from '../../config/reglas'
 import { validarContrasena, validarCorreo, validarRUN, validarTexto } from '../../domain/validaciones'
-import { eliminarUsuario, guardarUsuario } from '../../services/usuarios'
+import { cambiarEstadoUsuario, eliminarUsuario, guardarUsuario } from '../../services/usuarios'
 
 const VACIO = {
   run: '', nombre: '', apellidos: '', correo: '', fechaNacimiento: '', tipoUsuario: '',
@@ -87,6 +87,16 @@ function AdminUsuarios() {
     if (resultado.ok && enEdicion === u.run) limpiar()
   }
 
+  const alternarEstado = (u) => {
+    const activar = u.activo === false
+    if (!activar && !window.confirm(`¿Desactivar a ${u.nombre} ${u.apellidos}? No podrá iniciar sesión.`)) return
+    const resultado = cambiarEstadoUsuario(u.run, activar, sesion)
+    setMensaje(resultado.ok
+      ? { tipo: 'success', texto: activar ? 'Usuario activado.' : 'Usuario desactivado. Su historial se conserva.' }
+      : { tipo: 'danger', texto: resultado.motivo })
+    refrescar()
+  }
+
   return (
     <>
       <h1 className="titulo-seccion">Usuarios</h1>
@@ -141,20 +151,28 @@ function AdminUsuarios() {
         <table className="table tabla-admin align-middle">
           <caption className="visually-hidden">Listado de usuarios</caption>
           <thead>
-            <tr><th>RUN</th><th>Nombre</th><th>Correo</th><th>Tipo</th><th>Ubicación</th><th>Acciones</th></tr>
+            <tr><th>RUN</th><th>Nombre</th><th>Correo</th><th>Tipo</th><th>Estado</th><th>Ubicación</th><th>Acciones</th></tr>
           </thead>
           <tbody>
             {lista.map((u) => (
-              <tr key={u.run}>
+              <tr key={u.run} className={u.activo === false ? 'fila-inactiva' : undefined}>
                 <td>{u.run}</td>
                 <td>{u.nombre} {u.apellidos}</td>
                 <td>{u.correo}</td>
                 <td>{u.tipoUsuario}</td>
+                <td>
+                  <span className={`badge text-bg-${u.activo === false ? 'secondary' : 'success'}`}>
+                    {u.activo === false ? 'Inactivo' : 'Activo'}
+                  </span>
+                </td>
                 <td>{u.region} · {u.comuna}</td>
                 <td>
                   <div className="d-flex gap-2 flex-wrap">
                     <Link className="btn btn-sm btn-outline-secondary" to={`/admin/usuarios/${u.run}/historial`}>Historial</Link>
                     <button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(u)}>Editar</button>
+                    <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => alternarEstado(u)}>
+                      {u.activo === false ? 'Activar' : 'Desactivar'}
+                    </button>
                     <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(u)}>Eliminar</button>
                   </div>
                 </td>

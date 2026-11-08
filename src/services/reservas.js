@@ -1,6 +1,7 @@
 import { citas, servicios } from '../data/db'
 import { ESTADO_CITA, ESTADO_PAGO, METODO_PAGO, TIPO_SERVICIO } from '../config/reglas'
 import {
+  asignarNutricionista,
   evaluarReserva,
   hayDisponibilidad,
   debeCancelarsePorFaltaDeConfirmacion,
@@ -22,6 +23,8 @@ export function reservarCita({
   nutricionista = '',
   fechaHora,
   metodoPago,
+  motivo = '',
+  ordenId = null,
   ahora = new Date(),
 }) {
   const servicio = servicios.obtener(codigoServicio)
@@ -46,7 +49,10 @@ export function reservarCita({
     correoConfirmacion,
     codigoServicio,
     nombreServicio: servicio.nombre,
-    nutricionista,
+    nutricionista: asignarNutricionista({ servicio, nutricionista, fechaHora, citas: citas.listar() }),
+    nutricionistaPreferido: Boolean(nutricionista),
+    motivo: motivo.trim(),
+    ordenId,
     fechaHora: new Date(fechaHora).toISOString(),
     metodoPago,
     estadoCita: evaluacion.estadoCita,
@@ -123,6 +129,40 @@ export function cancelarCita(id, ahora = new Date()) {
   }
   const actualizada = citas.actualizar(id, { estadoCita: ESTADO_CITA.CANCELADA })
   return { ok: true, cita: actualizada, reembolsoPendiente: reembolsoCita(actualizada) }
+}
+
+// El paciente cambia la fecha, la hora o el nutricionista de una cita activa, con las mismas
+// 2 h de anticipación que para cancelar (RN-09). La nueva hora debe estar libre (RN-08, RN-14).
+// Una cita pagada sigue confirmada; una pagadera en clínica vuelve a calcular su plazo (RN-02, RN-07).
+export function reprogramarCita(id, { fechaHora, nutricionista = '' }, ahora = new Date()) {
+  const cita = citas.obtener(id)
+  if (!cita) return { ok: false, motivo: 'La cita no existe.' }
+  if (!puedeCancelarPaciente(cita, ahora)) {
+    return { ok: false, motivo: 'Con menos de 2 h de anticipación no se puede reprogramar en línea. Llama a la clínica.' }
+  }
+  if (new Date(fechaHora).getTime() === new Date(cita.fechaHora).getTime() && nutricionista === cita.nutricionista) {
+    return { ok: false, motivo: 'Elige una fecha, hora o nutricionista distinto al actual.' }
+  }
+  const servicio = servicios.obtener(cita.codigoServicio) ?? { codigo: cita.codigoServicio }
+  const metodo = cita.estadoPago === ESTADO_PAGO.PAGADO ? METODO_PAGO.ONLINE : METODO_PAGO.CLINICA
+  const evaluacion = evaluarReserva({ fechaHora, metodoPago: metodo, ahora })
+  if (!evaluacion.ok) return evaluacion
+  if (!hayDisponibilidad({ servicio, nutricionista, fechaHora, citas: citas.listar(), excluirId: id })) {
+    return { ok: false, motivo: 'Ese horario ya no está disponible.' }
+  }
+
+  const cambios = {
+    fechaHora: new Date(fechaHora).toISOString(),
+    nutricionista: asignarNutricionista({ servicio, nutricionista, fechaHora, citas: citas.listar().filter((c) => c.id !== id) }),
+    nutricionistaPreferido: Boolean(nutricionista),
+    fechaHoraAnterior: cita.fechaHora,
+    reprogramaciones: (cita.reprogramaciones ?? 0) + 1,
+  }
+  if (cita.estadoPago !== ESTADO_PAGO.PAGADO) {
+    cambios.estadoCita = evaluacion.estadoCita
+    cambios.limiteConfirmacion = evaluacion.limiteConfirmacion
+  }
+  return { ok: true, cita: citas.actualizar(id, cambios) }
 }
 
 // ---- Acciones del personal (administrador y recepción) ----

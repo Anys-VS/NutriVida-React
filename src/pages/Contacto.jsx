@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import Campo from '../components/Campo'
 import { mensajes } from '../data/db'
 import { validarCorreo, validarTexto } from '../domain/validaciones'
+
+// El mapa (Leaflet) se carga aparte para no hacer más pesada la primera carga del sitio.
+const MapaClinica = lazy(() => import('../components/MapaClinica'))
 
 const INICIAL = { nombre: '', correo: '', comentario: '' }
 
@@ -38,7 +41,7 @@ function Contacto() {
   return (
     <section className="seccion">
       <div className="container">
-        <div className="row g-5">
+        <div className="row g-4 g-lg-5">
           <div className="col-lg-5">
             <h1>Conversemos</h1>
             <p className="intro-seccion">
@@ -48,9 +51,12 @@ function Contacto() {
             <h2 className="h6">Cómo encontrarnos</h2>
             <address className="mb-3">
               Av. Alemania 0671, Temuco, Región de La Araucanía.<br />
-              Lunes a viernes, 08:00 a 19:00 horas.<br />
+              Lunes a viernes, 08:00 a 19:00 horas, y sábado de 09:00 a 14:00.<br />
               <a href="mailto:contacto@nutrivida.cl">contacto@nutrivida.cl</a>
             </address>
+            <Suspense fallback={<p className="texto-ayuda">Cargando mapa…</p>}>
+              <MapaClinica />
+            </Suspense>
           </div>
           <div className="col-lg-7">
             <form className="tarjeta-formulario" onSubmit={enviar} noValidate>
