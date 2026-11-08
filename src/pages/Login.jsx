@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import FormularioLogin from '../components/FormularioLogin'
 import { useSesion } from '../context/SesionContext'
 import { rutaInicialPorRol } from '../services/auth'
@@ -11,11 +11,14 @@ export function destinoSeguro(desde) {
 }
 
 function Login() {
-  const { aviso } = useSesion()
+  const { aviso, sesion } = useSesion()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [errorAuth, setErrorAuth] = useState('')
   const desde = params.get('desde')
+
+  // Quien ya tiene sesión no necesita el formulario.
+  if (sesion) return <Navigate to={destinoSeguro(desde) ?? rutaInicialPorRol(sesion.tipoUsuario)} replace />
 
   // El login pide los tokens (al backend o a la simulación local) y la sesión se arma desde el token.
   const entrar = async ({ correo, contrasena }) => {

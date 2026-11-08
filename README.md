@@ -64,6 +64,11 @@ Contrato esperado del backend: `POST /auth/login`, `/auth/registro`, `/auth/refr
 responden `{ accessToken, refreshToken }`. El token de acceso incluye `sub` (correo), `run`, `nombre`,
 `apellidos`, `rol` y `exp`.
 
+**Acceso con cuenta.** Sin sesión solo se ven el login, el registro, la portada (`/`) y el catálogo de
+servicios (`/servicios` y su detalle), para que un visitante conozca la clínica antes de registrarse. El caso
+pide que solo login y registro sean públicos; esta excepción se justifica en el ERS. Cualquier otra página
+lleva al login y, al entrar, vuelve a la página pedida.
+
 **Restricciones por rol.** `src/config/permisos.js` define qué roles usan cada funcionalidad. Las rutas
 (`RutaProtegida permiso="..."`), el menú del panel y el Navbar usan esa misma matriz. Sin sesión se va al
 login y se vuelve a la página pedida; con sesión pero sin permiso se muestra "No tienes permiso".
@@ -123,7 +128,7 @@ para que se carguen las cuentas y fichas nuevas.
 ## Pruebas
 
 Vitest con jsdom y Testing Library. Mocks: `localStorage` en memoria y reloj controlado
-con `vi.useFakeTimers()`. 56 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
+con `vi.useFakeTimers()`. 57 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
 automática, reembolsos, planes, pagos, cupos críticos, reportes, usuarios, carrito, reprogramación,
 buscador, horarios reales, fichas clínicas, tokens JWT, cliente HTTP y permisos) y sobre los componentes (renderizado, props, estado y
 eventos, incluido el menú según el rol). La cobertura se mide solo sobre los archivos que decidimos

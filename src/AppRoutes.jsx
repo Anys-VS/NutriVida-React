@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Outlet, Routes, Route } from 'react-router-dom'
 import LayoutPublico from './layouts/LayoutPublico'
 import { rutaInicialPorRol } from './services/auth'
 import RutaProtegida from './components/RutaProtegida'
@@ -49,28 +49,35 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<LayoutPublico />}>
+        {/* Páginas públicas: acceso, registro y la presentación de la clínica (inicio y catálogo de servicios).
+            El caso pide que solo login y registro sean públicos; la portada y el catálogo se dejan abiertos
+            para que un visitante conozca la clínica antes de crear su cuenta (decisión justificada en el ERS). */}
+        <Route path="login" element={<Login />} />
+        <Route path="registro" element={<Registro />} />
         <Route index element={<Inicio />} />
         <Route path="servicios" element={<Servicios />} />
         <Route path="servicio/:codigo" element={<DetalleServicio />} />
-        <Route path="categorias" element={<Categorias />} />
-        <Route path="categoria/:slug" element={<Categoria />} />
-        <Route path="ofertas" element={<Ofertas />} />
-        <Route path="nosotros" element={<Nosotros />} />
-        <Route path="contacto" element={<Contacto />} />
-        <Route path="blog" element={<Blog />} />
-        <Route path="blog/:id" element={<ArticuloBlog />} />
-        <Route path="reservar" element={<Reservar />} />
-        <Route path="checkout" element={protegida('reservas:propias', <Checkout />)} />
-        <Route path="reserva-confirmada/:id" element={protegida('reservas:propias', <ReservaConfirmada />)} />
-        <Route path="pago-error" element={<PagoError />} />
-        <Route path="login" element={<Login />} />
-        <Route path="registro" element={<Registro />} />
-        <Route path="especialistas" element={<Especialistas />} />
-        <Route path="mis-citas" element={protegida('reservas:propias', <MisCitas />)} />
-        <Route path="mi-progreso" element={protegida('reservas:propias', <MiProgreso />)} />
-        <Route path="carrito" element={protegida('reservas:propias', <Carrito />)} />
-        <Route path="orden/:id" element={protegida('reservas:propias', <OrdenConfirmada />)} />
-        <Route path="*" element={<Proximamente />} />
+
+        {/* Todo lo demás exige sesión; algunas rutas además exigen un permiso del rol. */}
+        <Route element={<RutaProtegida><Outlet /></RutaProtegida>}>
+          <Route path="categorias" element={<Categorias />} />
+          <Route path="categoria/:slug" element={<Categoria />} />
+          <Route path="ofertas" element={<Ofertas />} />
+          <Route path="nosotros" element={<Nosotros />} />
+          <Route path="contacto" element={<Contacto />} />
+          <Route path="blog" element={<Blog />} />
+          <Route path="blog/:id" element={<ArticuloBlog />} />
+          <Route path="reservar" element={<Reservar />} />
+          <Route path="checkout" element={protegida('reservas:propias', <Checkout />)} />
+          <Route path="reserva-confirmada/:id" element={protegida('reservas:propias', <ReservaConfirmada />)} />
+          <Route path="pago-error" element={<PagoError />} />
+          <Route path="especialistas" element={<Especialistas />} />
+          <Route path="mis-citas" element={protegida('reservas:propias', <MisCitas />)} />
+          <Route path="mi-progreso" element={protegida('reservas:propias', <MiProgreso />)} />
+          <Route path="carrito" element={protegida('reservas:propias', <Carrito />)} />
+          <Route path="orden/:id" element={protegida('reservas:propias', <OrdenConfirmada />)} />
+          <Route path="*" element={<Proximamente />} />
+        </Route>
       </Route>
 
       <Route path="admin" element={protegida('panel:acceder', <Suspense fallback={<p className="container seccion texto-ayuda" role="status">Cargando panel…</p>}><LayoutAdmin /></Suspense>)}>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import Campo from '../components/Campo'
+import { useSesion } from '../context/SesionContext'
 import { regionesComunas } from '../data/regiones'
 import {
   validarRUN, validarCorreo, validarContrasena, validarTexto,
@@ -33,6 +34,7 @@ function Registro() {
   const [valores, setValores] = useState(INICIAL)
   const [errores, setErrores] = useState({})
   const [errorGeneral, setErrorGeneral] = useState('')
+  const { sesion } = useSesion()
 
   const cambiar = (campo) => (evento) => {
     const valor = evento.target.value
@@ -54,6 +56,9 @@ function Registro() {
     }
     navigate(destinoSeguro(params.get('desde')) ?? rutaInicialPorRol(resultado.sesion.tipoUsuario), { replace: true })
   }
+
+  // Quien ya tiene sesión no necesita crear otra cuenta.
+  if (sesion) return <Navigate to={destinoSeguro(params.get('desde')) ?? rutaInicialPorRol(sesion.tipoUsuario)} replace />
 
   return (
     <section className="seccion">
