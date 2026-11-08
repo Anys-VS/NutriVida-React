@@ -6,10 +6,12 @@ import { SesionProvider } from '../context/SesionContext'
 import { CarritoProvider } from '../context/CarritoContext'
 import { ROL } from '../config/reglas'
 import { crearLocalStorageFalso } from '../test/localStorageFalso'
+import { guardarTokens } from '../auth/almacenTokens'
+import { emitirTokens } from '../auth/servidorLocal'
 
-// Deja una sesión guardada (como si el usuario ya hubiera iniciado sesión) y dibuja el menú.
-function dibujarCon(sesion, carrito = []) {
-  if (sesion) localStorage.setItem('nutrivida_sesion', JSON.stringify(sesion))
+// Deja tokens guardados (como si el usuario ya hubiera iniciado sesión) y dibuja el menú.
+function dibujarCon(usuario, carrito = []) {
+  if (usuario) guardarTokens(emitirTokens(usuario))
   localStorage.setItem('nutrivida_carrito', JSON.stringify(carrito))
   return render(
     <MemoryRouter initialEntries={['/']}>
@@ -22,11 +24,14 @@ function dibujarCon(sesion, carrito = []) {
   )
 }
 
-const paciente = { run: '195556660', correo: 'paciente@gmail.com', nombre: 'Javiera', tipoUsuario: ROL.PACIENTE }
-const nutricionista = { run: '151112226', correo: 'carolina.fuentes@nutrivida.cl', nombre: 'Carolina', tipoUsuario: ROL.NUTRICIONISTA }
+const paciente = { run: '195556660', correo: 'paciente@gmail.com', nombre: 'Javiera', apellidos: 'Soto', tipoUsuario: ROL.PACIENTE }
+const nutricionista = { run: '151112226', correo: 'carolina.fuentes@nutrivida.cl', nombre: 'Carolina', apellidos: 'Fuentes', tipoUsuario: ROL.NUTRICIONISTA }
 
 describe('Navbar', () => {
-  beforeEach(() => vi.stubGlobal('localStorage', crearLocalStorageFalso()))
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', crearLocalStorageFalso())
+    sessionStorage.clear()
+  })
   afterEach(() => vi.unstubAllGlobals())
 
   // Prueba 45: un visitante ve "Ingresar", el carrito vacío y el botón para agendar

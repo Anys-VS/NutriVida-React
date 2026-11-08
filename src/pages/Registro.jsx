@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Campo from '../components/Campo'
-import { useSesion } from '../context/SesionContext'
 import { regionesComunas } from '../data/regiones'
 import {
   validarRUN, validarCorreo, validarContrasena, validarTexto,
 } from '../domain/validaciones'
-import { registrarPaciente, rutaInicialPorRol } from '../services/auth'
+import { rutaInicialPorRol } from '../services/auth'
+import { registrar } from '../auth/servicioAuth'
 import { destinoSeguro } from './Login'
 
 const INICIAL = {
@@ -28,7 +28,6 @@ function validar(v) {
 }
 
 function Registro() {
-  const { iniciar } = useSesion()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [valores, setValores] = useState(INICIAL)
@@ -40,7 +39,7 @@ function Registro() {
     setValores((anterior) => ({ ...anterior, [campo]: valor, ...(campo === 'region' ? { comuna: '' } : {}) }))
   }
 
-  const enviar = (evento) => {
+  const enviar = async (evento) => {
     evento.preventDefault()
     const nuevos = validar(valores)
     setErrores(nuevos)
@@ -48,13 +47,12 @@ function Registro() {
       setErrorGeneral('Revisa los campos marcados antes de continuar.')
       return
     }
-    const resultado = registrarPaciente(valores)
+    const resultado = await registrar(valores)
     if (!resultado.ok) {
       setErrorGeneral(resultado.motivo)
       return
     }
-    iniciar(resultado.usuario)
-    navigate(destinoSeguro(params.get('desde')) ?? rutaInicialPorRol(resultado.usuario.tipoUsuario), { replace: true })
+    navigate(destinoSeguro(params.get('desde')) ?? rutaInicialPorRol(resultado.sesion.tipoUsuario), { replace: true })
   }
 
   return (

@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useSesion } from '../context/SesionContext'
 import { useCarrito } from '../context/CarritoContext'
 import { ROL } from '../config/reglas'
+import { puede } from '../config/permisos'
 import { rutaInicialPorRol } from '../services/auth'
 
 const claseEnlace = ({ isActive }) => 'nav-link' + (isActive ? ' active' : '')
@@ -37,7 +38,7 @@ function Navbar() {
   const [cuentaAbierta, setCuentaAbierta] = useState(false)
   const { sesion, cerrar } = useSesion()
   const { cantidad } = useCarrito()
-  const esPaciente = sesion?.tipoUsuario === ROL.PACIENTE
+  const esPaciente = puede(sesion, 'reservas:propias')
   const verCarrito = !sesion || esPaciente
   const navigate = useNavigate()
   const { pathname } = useLocation()

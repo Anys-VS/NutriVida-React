@@ -5,7 +5,7 @@ import { usuarios } from '../../data/db'
 import { validarContrasena, validarTexto } from '../../domain/validaciones'
 
 function Perfil() {
-  const { sesion, iniciar } = useSesion()
+  const { sesion, renovar } = useSesion()
   const actual = usuarios.obtener(sesion.run)
   const [valores, setValores] = useState({ nombre: actual?.nombre ?? '', apellidos: actual?.apellidos ?? '', contrasena: '' })
   const [errores, setErrores] = useState({})
@@ -15,7 +15,7 @@ function Perfil() {
 
   const cambiar = (campo) => (e) => setValores((v) => ({ ...v, [campo]: e.target.value }))
 
-  const guardar = (evento) => {
+  const guardar = async (evento) => {
     evento.preventDefault()
     const nuevos = {
       nombre: validarTexto(valores.nombre, { etiqueta: 'El nombre', maximo: 50 }),
@@ -26,7 +26,8 @@ function Perfil() {
     if (Object.values(nuevos).some(Boolean)) return
     const cambios = { nombre: valores.nombre.trim(), apellidos: valores.apellidos.trim() }
     if (valores.contrasena) cambios.contrasena = valores.contrasena
-    iniciar(usuarios.actualizar(actual.run, cambios)) // refresca el nombre mostrado en la sesión
+    usuarios.actualizar(actual.run, cambios)
+    await renovar() // el token nuevo trae el nombre actualizado que se muestra en la sesión
     setValores((v) => ({ ...v, contrasena: '' }))
     setMensaje({ tipo: 'success', texto: 'Perfil actualizado correctamente.' })
   }

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import FormularioLogin from '../components/FormularioLogin'
 import { useSesion } from '../context/SesionContext'
-import { iniciarSesion, rutaInicialPorRol } from '../services/auth'
+import { rutaInicialPorRol } from '../services/auth'
+import { iniciarSesion } from '../auth/servicioAuth'
 
 // Solo se aceptan rutas internas para evitar redirecciones a otros sitios.
 export function destinoSeguro(desde) {
@@ -10,21 +11,21 @@ export function destinoSeguro(desde) {
 }
 
 function Login() {
-  const { iniciar } = useSesion()
+  const { aviso } = useSesion()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [errorAuth, setErrorAuth] = useState('')
   const desde = params.get('desde')
 
-  const entrar = ({ correo, contrasena }) => {
-    const resultado = iniciarSesion(correo, contrasena)
+  // El login pide los tokens (al backend o a la simulación local) y la sesión se arma desde el token.
+  const entrar = async ({ correo, contrasena }) => {
+    setErrorAuth('')
+    const resultado = await iniciarSesion(correo, contrasena)
     if (!resultado.ok) {
       setErrorAuth(resultado.motivo)
       return
     }
-    const { usuario } = resultado
-    iniciar(usuario)
-    navigate(destinoSeguro(desde) ?? rutaInicialPorRol(usuario.tipoUsuario), { replace: true })
+    navigate(destinoSeguro(desde) ?? rutaInicialPorRol(resultado.sesion.tipoUsuario), { replace: true })
   }
 
   return (
@@ -36,6 +37,7 @@ function Login() {
             <p className="text-center intro-seccion mx-auto">
               Accede para revisar tus citas, tu historial y tu plan alimenticio.
             </p>
+            {aviso && <div role="status" className="alert alert-warning">{aviso}</div>}
             <FormularioLogin onSubmit={entrar} errorExterno={errorAuth} />
             <p className="text-center mt-3 mb-0">
               ¿Aún no tienes cuenta?{' '}
