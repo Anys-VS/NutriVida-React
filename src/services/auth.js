@@ -8,6 +8,14 @@ export function autenticar(correo, contrasena) {
   )
 }
 
+// Igual que autenticar, pero explica por qué no se puede entrar (credenciales o cuenta desactivada).
+export function iniciarSesion(correo, contrasena) {
+  const usuario = autenticar(correo, contrasena)
+  if (!usuario) return { ok: false, motivo: 'Correo o contraseña incorrectos.' }
+  if (usuario.activo === false) return { ok: false, motivo: 'Tu cuenta está desactivada. Comunícate con la clínica.' }
+  return { ok: true, usuario }
+}
+
 export function registrarPaciente(datos) {
   const correo = datos.correo.trim().toLowerCase()
   const run = datos.run.trim().toUpperCase()
@@ -24,5 +32,6 @@ export function registrarPaciente(datos) {
 
 export function rutaInicialPorRol(tipoUsuario) {
   if (tipoUsuario === ROL.PACIENTE) return '/mis-citas'
+  if (tipoUsuario === ROL.NUTRICIONISTA) return '/admin/agenda'
   return tipoUsuario === ROL.RECEPCION ? '/admin/citas' : '/admin'
 }

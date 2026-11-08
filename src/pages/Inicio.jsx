@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import ListaServicios from '../components/ListaServicios'
 import { servicios } from '../data/db'
 import { nutricionistas } from '../data/nutricionistas'
+import { describirHorario, iniciales } from '../domain/profesionales'
 
 const CODIGOS_DESTACADOS = ['CN001', 'PL001', 'EV002', 'TG002']
 
@@ -31,7 +32,7 @@ function Inicio() {
     <>
       <section className="hero-nv">
         <div className="container">
-          <div className="row align-items-center g-5">
+          <div className="row align-items-center g-4 g-lg-5">
             <article className="col-lg-6">
               <p className="eyebrow-libre mb-2">Clínica Nutricional NutriVida · Temuco</p>
               <h1>Nutrición con seguimiento real, no con fichas de papel</h1>
@@ -115,11 +116,11 @@ function Inicio() {
             {nutricionistas.map((nutricionista) => (
               <li key={nutricionista.id} className="col-sm-6 col-lg-3">
                 <article className="tarjeta-nutricionista">
-                  <div className="avatar-iniciales">{nutricionista.id}</div>
+                  <div className="avatar-iniciales">{iniciales(nutricionista.nombre)}</div>
                   <div>
                     <h3>{nutricionista.nombre}</h3>
                     <p className="especialidad">{nutricionista.especialidad}</p>
-                    <p className="horario">{nutricionista.horario}</p>
+                    <p className="horario">{describirHorario(nutricionista)}</p>
                   </div>
                 </article>
               </li>

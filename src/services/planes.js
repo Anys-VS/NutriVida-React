@@ -1,6 +1,6 @@
 import { citas, planes, servicios } from '../data/db'
 import { ESTADO_CITA, ESTADO_PAGO, ESTADO_PLAN, METODO_PAGO, TIPO_SERVICIO } from '../config/reglas'
-import { evaluarReserva, hayDisponibilidad } from '../domain/citas'
+import { asignarNutricionista, evaluarReserva, hayDisponibilidad } from '../domain/citas'
 import { planCompletado, resumenSesiones } from '../domain/planes'
 import { precioFinal } from '../domain/precios'
 import { reembolsoPlan } from '../domain/reembolsos'
@@ -12,7 +12,8 @@ function generarId(prefijo, ahora) {
 const sesionesDe = (planId) => citas.listar().filter((c) => c.planId === planId)
 
 // Una sesión de plan está cubierta por el pago del plan: no tiene precio propio (RN-13).
-function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora, primera = false }) {
+function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora, motivo = '', primera = false }) {
+  const servicio = servicios.obtener(plan.codigoServicio) ?? { codigo: plan.codigoServicio }
   const sesion = {
     id: generarId('C', ahora),
     planId: plan.id,
@@ -21,7 +22,9 @@ function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora
     correoConfirmacion,
     codigoServicio: plan.codigoServicio,
     nombreServicio: `${plan.nombre} (sesión)`,
-    nutricionista,
+    nutricionista: asignarNutricionista({ servicio, nutricionista, fechaHora, citas: citas.listar() }),
+    nutricionistaPreferido: Boolean(nutricionista),
+    motivo: motivo || plan.motivo || '',
     fechaHora: new Date(fechaHora).toISOString(),
     metodoPago: METODO_PAGO.ONLINE,
     estadoCita: ESTADO_CITA.CONFIRMADA,
@@ -37,7 +40,7 @@ function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora
 }
 
 // Contrata el plan (pago online) y agenda su primera sesión.
-export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCorreo, codigoServicio, nutricionista = '', fechaHora, ahora = new Date() }) {
+export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCorreo, codigoServicio, nutricionista = '', fechaHora, motivo = '', ordenId = null, ahora = new Date() }) {
   const servicio = servicios.obtener(codigoServicio)
   if (!servicio || servicio.tipo !== TIPO_SERVICIO.PLAN) return { ok: false, motivo: 'El plan no existe.' }
   if (!servicio.sesiones) return { ok: false, motivo: 'Este plan aún no tiene sesiones definidas. Consulta con la clínica.' }
@@ -61,6 +64,8 @@ export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCor
     estadoPago: ESTADO_PAGO.PAGADO,
     montoReembolsado: 0,
     reembolsoPendiente: 0,
+    motivo: motivo.trim(),
+    ordenId,
     creadoEn: new Date(ahora).toISOString(),
   }
   planes.crear(plan)

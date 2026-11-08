@@ -1,4 +1,5 @@
 import { nutricionistas } from '../data/nutricionistas'
+import { describirHorario, iniciales } from '../domain/profesionales'
 
 const DETALLE = {
   CF: 'Lidera los planes de pérdida de peso y control de patologías metabólicas asociadas a la alimentación.',
@@ -44,12 +45,12 @@ function Nosotros() {
             {nutricionistas.map((n) => (
               <li key={n.id} className="col-md-6">
                 <article className="tarjeta-nutricionista">
-                  <div className="avatar-iniciales">{n.id}</div>
+                  <div className="avatar-iniciales">{iniciales(n.nombre)}</div>
                   <div>
                     <h3>{n.nombre}</h3>
                     <p className="especialidad">{n.especialidad}</p>
                     <p>{DETALLE[n.id]}</p>
-                    <p className="horario">Atiende {n.horario}</p>
+                    <p className="horario">Atiende {describirHorario(n)}</p>
                   </div>
                 </article>
               </li>

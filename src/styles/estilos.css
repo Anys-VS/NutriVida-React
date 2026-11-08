@@ -104,10 +104,6 @@ p { max-width: 62ch; }
 }
 
 /* ---------- Encabezado / navegación ---------- */
-.encabezado-nv {
-  background-color: var(--crema);
-  border-bottom: 1px solid var(--borde-suave);
-}
 .marca-nv {
   font-family: var(--fuente-display);
   font-weight: 700;
@@ -120,18 +116,6 @@ p { max-width: 62ch; }
 }
 .marca-nv .hoja-icono { color: var(--ocre); }
 
-.navbar-nav .nav-link {
-  color: var(--carbon);
-  font-weight: 500;
-  margin: 0 0.35rem;
-}
-.navbar-nav .nav-link.active,
-.navbar-nav .nav-link:hover {
-  color: var(--verde-bosque-oscuro);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: var(--ocre);
-}
 
 /* ---------- Hero ---------- */
 .hero-nv {
@@ -536,7 +520,6 @@ h1, h2, h3, h4,
 
 p,
 .form-label,
-.navbar-nav .nav-link,
 .texto-ayuda,
 .meta-servicio,
 .descripcion-servicio {
@@ -548,23 +531,12 @@ p,
   opacity: 1;
 }
 
-.encabezado-nv {
-  background-color: var(--neutral-0);
-  border-bottom: 1px solid var(--neutral-200);
-}
-
 .marca-nv {
   color: var(--neutral-900) !important;
 }
 
 .marca-nv .hoja-icono {
   color: var(--primary-800);
-}
-
-.navbar-nav .nav-link.active,
-.navbar-nav .nav-link:hover {
-  color: var(--primary-800);
-  text-decoration-color: var(--primary-500);
 }
 
 .btn-nv-primario,
@@ -574,12 +546,16 @@ p,
   justify-content: center;
   text-align: center;
   line-height: 1.2;
+  /* Misma forma y tamaño para ambos: solo cambia el relleno (primario) o el borde (secundario). */
+  border-radius: 999px;
+  border-width: 1px;
+  padding: 0.65rem 1.5rem;
 }
 
 .btn-nv-primario {
-  background: linear-gradient(135deg, #0F766E 0%, #0D9488 40%, #2DD4BF 100%);
+  /* Tonos con contraste ≥ 4,5:1 para el texto blanco en todo el botón. */
+  background: linear-gradient(135deg, #0F766E 0%, #0D7F76 100%);
   border: 1px solid transparent;
-  border-radius: 24px;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(15, 118, 110, 0.18);
 }
@@ -587,7 +563,7 @@ p,
 .btn-nv-primario:hover,
 .btn-nv-primario:focus,
 .btn-nv-primario:active {
-  background: linear-gradient(135deg, #0D9488 0%, #14B8A6 50%, #2DD4BF 100%);
+  background: linear-gradient(135deg, #0B5E58 0%, #0F766E 100%);
   border-color: transparent;
   color: #ffffff;
   box-shadow: 0 6px 16px rgba(15, 118, 110, 0.24);
@@ -596,7 +572,6 @@ p,
 .btn-nv-secundario {
   background-color: var(--neutral-0);
   border: 1px solid var(--primary-800);
-  border-radius: 8px;
   color: var(--primary-900);
 }
 
@@ -750,58 +725,164 @@ p,
   }
 }
 
-/* ---------- Header público con degradado de la referencia ---------- */
+/* ---------- Encabezado público (Navbar) ----------
+   Todas las reglas del menú superior están aquí. Antes estaban repartidas en varios
+   bloques que se sobreescribían entre sí. */
 .encabezado-nv {
-  background: linear-gradient(90deg, #0F766E 0%, #14B8A6 52%, #2DD4BF 100%);
+  position: sticky;
+  top: 0;
+  z-index: 1030; /* sobre el mapa de Leaflet (1000) y bajo los modales de Bootstrap */
+  /* Tonos elegidos para que el texto blanco tenga contraste ≥ 4,5:1 (WCAG AA) en todo el ancho. */
+  background: linear-gradient(90deg, #0B5E58 0%, #0F766E 55%, #0D7F76 100%);
   border-bottom: 0;
   box-shadow: 0 2px 10px rgba(15, 118, 110, 0.16);
 }
+html { scroll-padding-top: 5.5rem; } /* los anclajes no quedan tapados por el encabezado fijo */
 
-.encabezado-nv .marca-nv {
-  color: #ffffff !important;
-}
-
-.encabezado-nv .marca-nv .hoja-icono {
-  color: #ffffff;
-}
+.encabezado-nv .marca-nv,
+.encabezado-nv .marca-nv .hoja-icono { color: #ffffff !important; }
 
 .encabezado-nv .navbar-nav .nav-link {
   color: rgba(255, 255, 255, 0.92);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0.35rem;
+  white-space: nowrap;
 }
-
 .encabezado-nv .navbar-nav .nav-link.active,
 .encabezado-nv .navbar-nav .nav-link:hover {
   color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
   text-decoration-color: #CCFBF1;
+}
+
+/* Foco visible al navegar con teclado: contorno blanco en vez del azul de Bootstrap. */
+.encabezado-nv a:focus-visible,
+.encabezado-nv button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.encabezado-nv .dropdown-menu .dropdown-item:focus-visible {
+  outline-color: var(--primary-900);
+  outline-offset: -2px;
 }
 
 .encabezado-nv .navbar-toggler {
   border-color: rgba(255, 255, 255, 0.7);
   margin-right: 1rem;
 }
+.encabezado-nv .navbar-toggler-icon { filter: brightness(0) invert(1); }
 
-.encabezado-nv .navbar-toggler-icon {
-  filter: brightness(0) invert(1);
-}
-
-.encabezado-nv .contador-carrito {
-  background-color: #ffffff;
-  color: #0F766E;
-}
-
+.encabezado-nv .btn { white-space: nowrap; }
 .encabezado-nv .btn-nv-primario {
   background: #ffffff;
   border-color: #ffffff;
   color: #0F766E;
   box-shadow: 0 4px 12px rgba(7, 75, 70, 0.16);
 }
-
 .encabezado-nv .btn-nv-primario:hover,
 .encabezado-nv .btn-nv-primario:focus {
   background: #CCFBF1;
   border-color: #CCFBF1;
   color: #0F766E;
 }
+
+/* Carrito: ícono de línea con el contador sobre la esquina. */
+.encabezado-nv .navbar-nav .enlace-carrito {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.encabezado-nv .carrito-barra {
+  display: inline-flex;
+  align-items: center;
+  color: #ffffff;
+  padding: 0.25rem;
+  margin-right: 0.5rem;
+}
+.icono-carrito {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  transition: background-color 0.15s ease;
+}
+.icono-carrito svg { display: block; }
+.enlace-carrito:hover .icono-carrito,
+.enlace-carrito:focus-visible .icono-carrito,
+.enlace-carrito.active .icono-carrito { background-color: rgba(255, 255, 255, 0.18); }
+.contador-carrito {
+  position: absolute;
+  top: -0.1rem;
+  right: -0.2rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--primary-900);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.15rem;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--primary-800);
+}
+
+/* Menú colapsado (tablet y celular): si es más alto que la pantalla, se desplaza por dentro. */
+@media (max-width: 1199.98px) {
+  .encabezado-nv .navbar-collapse.show {
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+  }
+  /* Menú de celular: alineado con el logo (16px), enlaces altos y fáciles de tocar, con separadores. */
+  .encabezado-nv .navbar-nav {
+    padding: 0.25rem 1rem 1rem;
+    margin-bottom: 0 !important;
+  }
+  .encabezado-nv .navbar-nav > .nav-item > .nav-link {
+    margin: 0;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .encabezado-nv .navbar-nav > .nav-item > .nav-link.dropdown-toggle {
+    width: 100%;
+    text-align: left;
+    border-radius: 0;
+  }
+  .encabezado-nv .navbar-nav .dropdown-menu { margin: 0.5rem 0; }
+  .encabezado-nv .navbar-nav > .nav-item:last-child { margin-top: 1rem !important; }
+  .encabezado-nv .navbar-nav > .nav-item:last-child .btn { display: block; width: 100%; padding: 0.6rem 1rem; }
+}
+@media (max-width: 767px) {
+  .encabezado-nv .navbar-nav .nav-link { font-size: 1rem; }
+}
+@media (min-width: 1200px) {
+  .encabezado-nv .navbar-nav .nav-link { padding-left: 0.5rem; padding-right: 0.5rem; font-size: 1rem; }
+  .encabezado-nv .navbar-nav .enlace-carrito { padding-top: 0; padding-bottom: 0; }
+  .encabezado-nv .navbar-brand img { width: 170px; height: auto; }
+}
+
+/* Enlace "Saltar al contenido": oculto hasta que recibe el foco con Tab. */
+.saltar-contenido {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1040;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--primary-900);
+  font-weight: 600;
+  transform: translateY(-200%);
+  transition: transform 0.15s ease;
+}
+.saltar-contenido:focus { transform: translateY(0); outline: 2px solid var(--primary-900); }
+main:focus { outline: none; }
 
 /* ---------- Acciones de tarjetas alineadas ---------- */
 .tarjeta-servicio .cuerpo-servicio > .acciones-servicio {
@@ -847,10 +928,6 @@ main p.text-center.mt-4 .btn {
 body {
   font-size: 1rem;
   line-height: 1.65;
-}
-
-.navbar-nav .nav-link {
-  font-size: 1rem;
 }
 
 .marca-nv {
@@ -925,10 +1002,6 @@ body {
 }
 
 /* ---------- Legibilidad reforzada según la referencia ---------- */
-.navbar-nav .nav-link {
-  font-size: 1.1rem;
-}
-
 .marca-nv {
   font-size: 1.75rem;
 }
@@ -977,10 +1050,6 @@ body {
 }
 
 @media (max-width: 767px) {
-  .navbar-nav .nav-link {
-    font-size: 1rem;
-  }
-
   .marca-nv {
     font-size: 1.5rem;
   }
@@ -1089,3 +1158,34 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Evaluación 3: carrito, buscador, ficha clínica y mapa ---- */
+.item-carrito .franja-tipo { position: static; display: inline-block; }
+.item-con-problema { border-color: var(--danger-text); background-color: var(--danger-bg); }
+.tarjeta-metrica {
+  background-color: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  height: 100%;
+}
+.tarjeta-metrica span { display: block; color: var(--neutral-700); font-size: 0.85rem; }
+.tarjeta-metrica strong { display: block; color: var(--verde-bosque-oscuro); font-size: 1.4rem; }
+.tarjeta-metrica small { color: var(--neutral-700); }
+.grafico-progreso { width: 100%; max-width: 640px; height: auto; }
+.grafico-progreso .eje { stroke: var(--neutral-200); stroke-width: 1; }
+.grafico-progreso .linea { fill: none; stroke: var(--primary-900); stroke-width: 3; }
+.grafico-progreso .punto { fill: var(--primary-900); }
+.grafico-progreso .valor { font-size: 12px; font-weight: 600; fill: var(--neutral-900); }
+.grafico-progreso .etiqueta-eje { font-size: 11px; fill: var(--neutral-700); }
+.plan-alimenticio { white-space: pre-line; }
+.fila-inactiva td { color: var(--neutral-500); }
+.mapa-contenedor { height: 300px; width: 100%; border-radius: 10px; border: 1px solid var(--neutral-200); z-index: 0; }
+@media (max-width: 575.98px) {
+  .mapa-contenedor { height: 240px; }
+}
+@media print {
+  .encabezado-nv, footer, .btn { display: none !important; }
+}
+.tabla-admin.tabla-compacta { min-width: 0; }
+

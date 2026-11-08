@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import FormularioLogin from '../components/FormularioLogin'
 import { useSesion } from '../context/SesionContext'
-import { autenticar, rutaInicialPorRol } from '../services/auth'
+import { iniciarSesion, rutaInicialPorRol } from '../services/auth'
 
 // Solo se aceptan rutas internas para evitar redirecciones a otros sitios.
 export function destinoSeguro(desde) {
@@ -17,11 +17,12 @@ function Login() {
   const desde = params.get('desde')
 
   const entrar = ({ correo, contrasena }) => {
-    const usuario = autenticar(correo, contrasena)
-    if (!usuario) {
-      setErrorAuth('Correo o contraseña incorrectos.')
+    const resultado = iniciarSesion(correo, contrasena)
+    if (!resultado.ok) {
+      setErrorAuth(resultado.motivo)
       return
     }
+    const { usuario } = resultado
     iniciar(usuario)
     navigate(destinoSeguro(desde) ?? rutaInicialPorRol(usuario.tipoUsuario), { replace: true })
   }
@@ -41,7 +42,8 @@ function Login() {
               <Link to={desde ? `/registro?desde=${encodeURIComponent(desde)}` : '/registro'}>Regístrate aquí</Link>
             </p>
             <p className="texto-ayuda text-center mt-2 mb-0">
-              Administrador de demostración: admin@gmail.com · admin123
+              Cuentas de demostración: admin@gmail.com · admin123 · paciente@gmail.com · paciente1 ·
+              carolina.fuentes@nutrivida.cl · nutri123
             </p>
           </div>
         </div>

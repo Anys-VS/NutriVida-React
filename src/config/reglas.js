@@ -6,6 +6,7 @@ export const REGLAS = {
   ANTICIPACION_MINIMA_HORAS: 2,
   PORCENTAJE_REEMBOLSO_PLAN: 0.8,
   UMBRAL_CUPOS_CRITICOS: 2,
+  MAXIMO_ITEMS_CARRITO: 10,
 }
 
 export const ESTADO_CITA = {
@@ -45,9 +46,21 @@ export const HORARIOS = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '
 
 export const ROL = {
   PACIENTE: 'Paciente',
+  NUTRICIONISTA: 'Nutricionista',
   ADMIN: 'Administrador',
   RECEPCION: 'Recepción',
 }
+
+// Motivos de consulta sugeridos al reservar (el paciente puede detallar el suyo).
+export const MOTIVOS_CONSULTA = [
+  'Bajar de peso',
+  'Control de diabetes o hipertensión',
+  'Nutrición deportiva',
+  'Alimentación vegetariana o vegana',
+  'Alimentación de niños',
+  'Control de seguimiento',
+  'Otro',
+]
 
 // Las categorías corresponden a los tipos de servicio, de los que dependen las reglas
 // (planes solo online, talleres con cupos). Por eso se pueden editar sus textos, no crear ni borrar.

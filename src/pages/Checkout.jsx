@@ -70,6 +70,7 @@ function Checkout() {
       codigoServicio: servicio.codigo,
       nutricionista: borrador.nutricionista,
       fechaHora: borrador.fechaHora,
+      motivo: borrador.motivo ?? '',
     }
     const resultado = esPlan ? contratarPlan(datosReserva) : reservarCita({ ...datosReserva, metodoPago: metodo })
     if (!resultado.ok) {
@@ -123,7 +124,8 @@ function Checkout() {
               <h2 className="h4">Resumen</h2>
               <p className="mb-1"><strong>{servicio.nombre}</strong></p>
               <p className="mb-1">{formatearFechaHora(borrador.fechaHora)}</p>
-              <p className="mb-1">Nutricionista: {borrador.nutricionista || 'Sin preferencia'}</p>
+              <p className="mb-1">Nutricionista: {borrador.nutricionista || 'Sin preferencia (la clínica asigna uno disponible)'}</p>
+              {borrador.motivo && <p className="mb-1">Motivo: {borrador.motivo}</p>}
               {servicio.sesiones && (
                 <p className="mb-1">Incluye {servicio.sesiones} sesiones: agendas la primera ahora y las demás desde Mis citas.</p>
               )}

@@ -52,7 +52,8 @@ function ReservaConfirmada() {
           <dl className="mb-3">
             <dt>Servicio</dt><dd>{cita.nombreServicio}</dd>
             <dt>Fecha y hora</dt><dd>{formatearFechaHora(cita.fechaHora)}</dd>
-            <dt>Nutricionista</dt><dd>{cita.nutricionista || 'Sin preferencia'}</dd>
+            <dt>Nutricionista</dt><dd>{cita.nutricionista || 'Por asignar'}</dd>
+            {cita.motivo && <><dt>Motivo</dt><dd>{cita.motivo}</dd></>}
             <dt>Estado de la cita</dt><dd><EstadoBadge estado={cita.estadoCita} /></dd>
             <dt>Estado del pago</dt><dd><EstadoBadge estado={cita.estadoPago} /></dd>
             <dt>Total</dt><dd>{cita.planId ? 'Incluida en el plan' : formatearPrecioCLP(cita.precio)}</dd>
