@@ -1,5 +1,17 @@
 import { ESTADO_CITA, ESTADO_PAGO } from '../config/reglas'
 import { ingresoDePlan } from './metricas'
+import { fechaLocalISO } from '../utils/formato'
+
+// Deja solo los registros cuya fecha (día local) cae entre `desde` y `hasta`, ambos incluidos.
+// Las fechas vienen como 'AAAA-MM-DD'; si falta una, ese extremo queda abierto.
+export function filtrarPorPeriodo(registros, { desde, hasta } = {}, fechaDe = (r) => r.fechaHora) {
+  return registros.filter((r) => {
+    const valor = fechaDe(r)
+    if (!valor) return !desde && !hasta
+    const dia = fechaLocalISO(new Date(valor))
+    return (!desde || dia >= desde) && (!hasta || dia <= hasta)
+  })
+}
 
 function agrupar(citas, claveDe) {
   const grupos = {}
@@ -17,7 +29,10 @@ function agrupar(citas, claveDe) {
 }
 
 // Reportes a partir de las citas: tasa de inasistencia y desglose por categoría y nutricionista.
-export function calcularReportes({ citas, servicios, planes = [] }) {
+// Con `periodo` solo cuentan las citas de esas fechas y los planes contratados en ellas.
+export function calcularReportes({ citas: todasLasCitas, servicios, planes: todosLosPlanes = [], periodo }) {
+  const citas = filtrarPorPeriodo(todasLasCitas, periodo)
+  const planes = filtrarPorPeriodo(todosLosPlanes, periodo, (p) => p.creadoEn)
   const tipoDe = (codigo) => servicios.find((s) => s.codigo === codigo)?.tipo ?? 'Servicio eliminado'
   const atendidas = citas.filter((c) => c.estadoCita === ESTADO_CITA.ATENDIDA).length
   const inasistencias = citas.filter((c) => c.estadoCita === ESTADO_CITA.INASISTENCIA).length
