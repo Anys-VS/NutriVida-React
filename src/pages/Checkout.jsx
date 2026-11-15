@@ -50,10 +50,13 @@ function Checkout() {
       return
     }
 
-    const evaluacion = evaluarReserva({ fechaHora: borrador.fechaHora, metodoPago: metodo, esPlan })
-    if (!evaluacion.ok) {
-      setErrorGeneral(evaluacion.motivo)
-      return
+    // Un plan sin primera sesión no tiene fecha que validar; igual se paga solo online.
+    if (borrador.fechaHora) {
+      const evaluacion = evaluarReserva({ fechaHora: borrador.fechaHora, metodoPago: metodo, esPlan })
+      if (!evaluacion.ok) {
+        setErrorGeneral(evaluacion.motivo)
+        return
+      }
     }
 
     if (metodo === METODO_PAGO.ONLINE) {
@@ -78,6 +81,11 @@ function Checkout() {
       return
     }
     limpiarBorrador()
+    if (!resultado.cita) {
+      const mensaje = `Contrataste "${servicio.nombre}". Agenda sus ${servicio.sesiones} sesiones cuando quieras con "Agendar sesión".`
+      navigate('/mis-citas', { replace: true, state: { mensaje } })
+      return
+    }
     navigate(`/reserva-confirmada/${resultado.cita.id}`, { replace: true })
   }
 
@@ -123,11 +131,19 @@ function Checkout() {
             <div className="tarjeta-formulario resumen-carrito">
               <h2 className="h4">Resumen</h2>
               <p className="mb-1"><strong>{servicio.nombre}</strong></p>
-              <p className="mb-1">{formatearFechaHora(borrador.fechaHora)}</p>
-              <p className="mb-1">Nutricionista: {borrador.nutricionista || 'Sin preferencia (la clínica asigna uno disponible)'}</p>
+              {borrador.fechaHora ? (
+                <>
+                  <p className="mb-1">{formatearFechaHora(borrador.fechaHora)}</p>
+                  <p className="mb-1">Nutricionista: {borrador.nutricionista || 'Sin preferencia (la clínica asigna uno disponible)'}</p>
+                </>
+              ) : (
+                <p className="mb-1">Primera sesión: por agendar después del pago</p>
+              )}
               {borrador.motivo && <p className="mb-1">Motivo: {borrador.motivo}</p>}
               {servicio.sesiones && (
-                <p className="mb-1">Incluye {servicio.sesiones} sesiones: agendas la primera ahora y las demás desde Mis citas.</p>
+                <p className="mb-1">
+                  Incluye {servicio.sesiones} sesiones: {borrador.fechaHora ? 'agendas la primera ahora y las demás' : 'las agendas todas'} desde Mis citas.
+                </p>
               )}
               <hr />
               <p className="d-flex justify-content-between total-carrito mb-0">

@@ -6,13 +6,13 @@ const aBase64 = (texto) => texto.replace(/-/g, '+').replace(/_/g, '/').padEnd(Ma
 
 function decodificarBase64Url(texto) {
   const binario = atob(aBase64(texto))
-  const bytes = Uint8Array.from(binario, (c) => c.charCodeAt(0))
+  const bytes = Uint8Array.from(binario, (caracter) => caracter.charCodeAt(0))
   return new TextDecoder().decode(bytes)
 }
 
 export function codificarBase64Url(objeto) {
   const bytes = new TextEncoder().encode(JSON.stringify(objeto))
-  const binario = Array.from(bytes, (b) => String.fromCharCode(b)).join('')
+  const binario = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('')
   return btoa(binario).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 

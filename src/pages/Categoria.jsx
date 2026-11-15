@@ -31,7 +31,7 @@ function Categoria() {
         <h1 className="titulo-seccion">{categoria.titulo}</h1>
         <p className="intro-seccion">{categoria.descripcion}</p>
         <ListaServicios
-          servicios={servicios.listar().filter((s) => s.tipo === categoria.tipo)}
+          servicios={servicios.listar().filter((servicio) => servicio.tipo === categoria.tipo)}
           onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)}
         />
       </div>

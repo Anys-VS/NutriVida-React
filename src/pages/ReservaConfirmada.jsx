@@ -9,11 +9,11 @@ import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 function mensajeDePlan(cita) {
   const plan = planes.obtener(cita.planId)
   if (!plan) return 'Tu sesión quedó confirmada.'
-  const r = resumenSesiones(plan, citas.listar().filter((c) => c.planId === plan.id))
+  const resumen = resumenSesiones(plan, citas.listar().filter((cita) => cita.planId === plan.id))
   const inicio = cita.primeraSesion
     ? `Tu plan "${plan.nombre}" quedó contratado y pagado (${formatearPrecioCLP(plan.montoPagado)}). `
     : `Tu sesión del plan "${plan.nombre}" quedó confirmada. `
-  return `${inicio}Te quedan ${r.porAgendar} sesión(es) por agendar desde Mis citas.`
+  return `${inicio}Te quedan ${resumen.porAgendar} sesión(es) por agendar desde Mis citas.`
 }
 
 function mensajeDeEstado(cita) {

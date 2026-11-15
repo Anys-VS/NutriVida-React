@@ -63,15 +63,15 @@ export function puedeCancelarPaciente(cita, ahora = new Date()) {
 
 // Fecha local "AAAA-MM-DD" y hora "HH:MM" de un instante, para compararlo con la jornada.
 function partesLocales(fechaHora) {
-  const d = new Date(fechaHora)
-  const dos = (n) => String(n).padStart(2, '0')
-  return { fecha: `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`, hora: `${dos(d.getHours())}:${dos(d.getMinutes())}` }
+  const momento = new Date(fechaHora)
+  const dos = (numero) => String(numero).padStart(2, '0')
+  return { fecha: `${momento.getFullYear()}-${dos(momento.getMonth() + 1)}-${dos(momento.getDate())}`, hora: `${dos(momento.getHours())}:${dos(momento.getMinutes())}` }
 }
 
 function ocupadasEn(fechaHora, citas, excluirId) {
   const momento = new Date(fechaHora).getTime()
   return citas.filter(
-    (c) => c.id !== excluirId && ESTADOS_ACTIVOS.includes(c.estadoCita) && new Date(c.fechaHora).getTime() === momento,
+    (cita) => cita.id !== excluirId && ESTADOS_ACTIVOS.includes(cita.estadoCita) && new Date(cita.fechaHora).getTime() === momento,
   )
 }
 
@@ -79,7 +79,7 @@ function ocupadasEn(fechaHora, citas, excluirId) {
 export function profesionalesLibres({ fechaHora, citas, profesionales = nutricionistas, excluirId = null }) {
   const { fecha, hora } = partesLocales(fechaHora)
   const ocupadas = ocupadasEn(fechaHora, citas, excluirId)
-  return profesionales.filter((p) => atiendeEn(p, fecha, hora) && !ocupadas.some((c) => c.nutricionista === p.nombre))
+  return profesionales.filter((profesional) => atiendeEn(profesional, fecha, hora) && !ocupadas.some((cita) => cita.nutricionista === profesional.nombre))
 }
 
 // RN-12 y RN-14: talleres por cupos; el resto, un nutricionista por horario y dentro de su jornada.
@@ -87,12 +87,12 @@ export function hayDisponibilidad({ servicio, nutricionista, fechaHora, citas, p
   const ocupadas = ocupadasEn(fechaHora, citas, excluirId)
 
   if (servicio.cupos) {
-    return ocupadas.filter((c) => c.codigoServicio === servicio.codigo).length < servicio.cupos
+    return ocupadas.filter((cita) => cita.codigoServicio === servicio.codigo).length < servicio.cupos
   }
   const libres = profesionalesLibres({ fechaHora, citas, profesionales, excluirId })
   if (!nutricionista) return libres.length > 0 || profesionales.length === 0
-  if (!buscarPorNombre(profesionales, nutricionista)) return !ocupadas.some((c) => c.nutricionista === nutricionista)
-  return libres.some((p) => p.nombre === nutricionista)
+  if (!buscarPorNombre(profesionales, nutricionista)) return !ocupadas.some((cita) => cita.nutricionista === nutricionista)
+  return libres.some((profesional) => profesional.nombre === nutricionista)
 }
 
 // Sin preferencia, la clínica asigna al primer nutricionista libre en ese bloque.
@@ -106,7 +106,7 @@ export function bloquesDelDia({ nutricionista, fecha, profesionales = nutricioni
   const elegido = nutricionista ? buscarPorNombre(profesionales, nutricionista) : null
   if (nutricionista && !elegido) return HORARIOS
   const quienes = elegido ? [elegido] : profesionales
-  const bloques = new Set(quienes.filter((p) => atiendeEnFecha(p, fecha)).flatMap(bloquesDeJornada))
+  const bloques = new Set(quienes.filter((profesional) => atiendeEnFecha(profesional, fecha)).flatMap(bloquesDeJornada))
   return [...bloques].sort()
 }
 
@@ -128,13 +128,13 @@ export function horariosDisponibles({ servicio, nutricionista, fecha, citas, aho
 export function proximosHorarios({ profesional, citas, ahora = new Date(), cantidad = 3, diasMaximos = 14 }) {
   const resultado = []
   const servicio = { codigo: '' }
-  for (let i = 0; i < diasMaximos && resultado.length < cantidad; i += 1) {
+  for (let diasDesdeHoy = 0; diasDesdeHoy < diasMaximos && resultado.length < cantidad; diasDesdeHoy += 1) {
     const dia = new Date(ahora)
-    dia.setDate(dia.getDate() + i)
+    dia.setDate(dia.getDate() + diasDesdeHoy)
     const { fecha } = partesLocales(dia)
     horariosDisponibles({ servicio, nutricionista: profesional.nombre, fecha, citas, ahora, profesionales: [profesional] })
-      .filter((h) => h.disponible)
-      .forEach((h) => { if (resultado.length < cantidad) resultado.push({ fecha, hora: h.hora }) })
+      .filter((horario) => horario.disponible)
+      .forEach((horario) => { if (resultado.length < cantidad) resultado.push({ fecha, hora: horario.hora }) })
   }
   return resultado
 }

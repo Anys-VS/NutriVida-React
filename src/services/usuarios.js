@@ -1,7 +1,7 @@
 import { usuarios } from '../data/db'
 import { ROL } from '../config/reglas'
 
-const contarAdmins = (lista) => lista.filter((u) => u.tipoUsuario === ROL.ADMIN && u.activo !== false).length
+const contarAdmins = (lista) => lista.filter((usuario) => usuario.tipoUsuario === ROL.ADMIN && usuario.activo !== false).length
 
 // Crea o edita un usuario. Cuida que siempre quede al menos un administrador.
 export function guardarUsuario(datos, runEnEdicion = null) {
@@ -10,7 +10,7 @@ export function guardarUsuario(datos, runEnEdicion = null) {
   const correo = datos.correo.trim().toLowerCase()
 
   const duplicado = lista.some(
-    (u) => u.run !== runEnEdicion && (u.run === run || u.correo.toLowerCase() === correo),
+    (existente) => existente.run !== runEnEdicion && (existente.run === run || existente.correo.toLowerCase() === correo),
   )
   if (duplicado) return { ok: false, motivo: 'El RUN o el correo ya están registrados.' }
 

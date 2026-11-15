@@ -37,12 +37,16 @@ export const citasApi = {
   registrarAsistencia: (id, estado) => cliente.patch(`/citas/${id}/asistencia`, { estado }).then(datos),
 }
 export const planesApi = crud('/planes')
+// El carrito devuelve { items: [...por reservar], citasPorPagar: [...agendadas con pago pendiente] }.
+// En un plan, `fechaHora` de un ítem es opcional (null = la primera sesión se agenda después de pagar).
 export const carritoApi = {
   listar: () => cliente.get('/carrito').then(datos),
   agregar: (item) => cliente.post('/carrito/items', item).then(datos),
+  editarHorario: (itemId, { nutricionista, fechaHora }) => cliente.put(`/carrito/items/${itemId}`, { nutricionista, fechaHora }).then(datos),
   quitar: (itemId) => cliente.delete(`/carrito/items/${itemId}`).then(datos),
   vaciar: () => cliente.delete('/carrito').then(datos),
-  pagar: ({ ids, correoConfirmacion }) => cliente.post('/ordenes', { items: ids, correoConfirmacion }).then(datos),
+  // Una sola orden con ítems nuevos y citas ya agendadas; todo o nada.
+  pagar: ({ ids, citaIds, correoConfirmacion }) => cliente.post('/ordenes', { items: ids, citas: citaIds, correoConfirmacion }).then(datos),
 }
 export const ordenesApi = { mias: () => cliente.get('/ordenes/mias').then(datos), obtener: (id) => cliente.get(`/ordenes/${id}`).then(datos) }
 

@@ -54,7 +54,7 @@ describe('planes (localStorage simulado y reloj controlado)', () => {
     agendarSesion({ planId: plan.id, fechaHora: '2026-11-17T10:00:00' })
 
     expect(cancelarPlan(plan.id)).toMatchObject({ ok: true, reembolsoPendiente: 52000 })
-    expect(citas.listar().every((c) => c.estadoCita === ESTADO_CITA.CANCELADA)).toBe(true)
+    expect(citas.listar().every((cita) => cita.estadoCita === ESTADO_CITA.CANCELADA)).toBe(true)
 
     expect(registrarReembolsoPlan(plan.id)).toMatchObject({ ok: true, reembolso: 52000 })
     expect(planes.obtener(plan.id)).toMatchObject({
@@ -71,4 +71,17 @@ describe('planes (localStorage simulado y reloj controlado)', () => {
     expect(planes.obtener(plan.id)).toMatchObject({ estadoPlan: ESTADO_PLAN.CANCELADO, estadoPago: ESTADO_PAGO.PAGADO })
     expect(registrarReembolsoPlan(plan.id).ok).toBe(false)
   })
+
+  // Prueba 61: la primera sesión de un plan es opcional; sin fecha, todas quedan por agendar
+  it('contrata un plan sin agendar sesiones y después permite agendar la primera', () => {
+    const resultado = contratar({ fechaHora: null })
+
+    expect(resultado).toMatchObject({ ok: true, cita: null, plan: { estadoPago: ESTADO_PAGO.PAGADO, sesionesTotales: 2 } })
+    expect(citas.listar()).toHaveLength(0)
+
+    const sesion = agendarSesion({ planId: resultado.plan.id, fechaHora: '2026-11-13T10:00:00' })
+    expect(sesion.ok).toBe(true)
+    expect(citas.listar()).toHaveLength(1)
+  })
 })
+

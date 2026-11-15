@@ -10,14 +10,14 @@ function AdminPlanes() {
   const [mensaje, setMensaje] = useState(null)
   const refrescar = useCallback(() => setLista(planes.listar()), [])
 
-  const nombres = Object.fromEntries(usuarios.listar().map((u) => [u.correo.toLowerCase(), `${u.nombre} ${u.apellidos}`]))
+  const nombres = Object.fromEntries(usuarios.listar().map((usuario) => [usuario.correo.toLowerCase(), `${usuario.nombre} ${usuario.apellidos}`]))
   const todasLasCitas = citas.listar()
 
   const reembolsar = (id) => {
-    const r = registrarReembolsoPlan(id)
-    setMensaje(r.ok
-      ? { tipo: 'success', texto: `Reembolso de ${formatearPrecioCLP(r.reembolso)} registrado.` }
-      : { tipo: 'danger', texto: r.motivo })
+    const resultado = registrarReembolsoPlan(id)
+    setMensaje(resultado.ok
+      ? { tipo: 'success', texto: `Reembolso de ${formatearPrecioCLP(resultado.reembolso)} registrado.` }
+      : { tipo: 'danger', texto: resultado.motivo })
     refrescar()
   }
 
@@ -32,19 +32,19 @@ function AdminPlanes() {
           <thead><tr><th>Paciente</th><th>Plan</th><th>Sesiones</th><th>Estado</th><th>Pago</th><th>Acciones</th></tr></thead>
           <tbody>
             {lista.length === 0 && <tr><td colSpan={6} className="text-center">Aún no hay planes contratados.</td></tr>}
-            {lista.map((p) => {
-              const r = resumenSesiones(p, todasLasCitas.filter((c) => c.planId === p.id))
+            {lista.map((plan) => {
+              const resumen = resumenSesiones(plan, todasLasCitas.filter((cita) => cita.planId === plan.id))
               return (
-                <tr key={p.id}>
-                  <td>{nombres[p.pacienteCorreo.toLowerCase()] ?? p.pacienteCorreo}</td>
-                  <td>{p.nombre}<br /><small className="texto-ayuda">Contratado el {formatearFechaHora(p.creadoEn)}</small></td>
-                  <td>{r.atendidas} de {r.total} atendidas<br /><small className="texto-ayuda">{r.agendadas} agendadas · {r.porAgendar} por agendar</small></td>
-                  <td><EstadoBadge estado={p.estadoPlan} /></td>
-                  <td><EstadoBadge estado={p.estadoPago} /><br /><small>{formatearPrecioCLP(p.montoPagado)}</small></td>
+                <tr key={plan.id}>
+                  <td>{nombres[plan.pacienteCorreo.toLowerCase()] ?? plan.pacienteCorreo}</td>
+                  <td>{plan.nombre}<br /><small className="texto-ayuda">Contratado el {formatearFechaHora(plan.creadoEn)}</small></td>
+                  <td>{resumen.atendidas} de {resumen.total} atendidas<br /><small className="texto-ayuda">{resumen.agendadas} agendadas · {resumen.porAgendar} por agendar</small></td>
+                  <td><EstadoBadge estado={plan.estadoPlan} /></td>
+                  <td><EstadoBadge estado={plan.estadoPago} /><br /><small>{formatearPrecioCLP(plan.montoPagado)}</small></td>
                   <td>
-                    {p.reembolsoPendiente > 0 && (
-                      <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => reembolsar(p.id)}>
-                        Reembolsar {formatearPrecioCLP(p.reembolsoPendiente)}
+                    {plan.reembolsoPendiente > 0 && (
+                      <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => reembolsar(plan.id)}>
+                        Reembolsar {formatearPrecioCLP(plan.reembolsoPendiente)}
                       </button>
                     )}
                   </td>

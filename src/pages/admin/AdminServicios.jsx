@@ -11,27 +11,27 @@ const VACIO = {
   precio: '', descuento: '0', sesiones: '', cupos: '', descripcion: '',
 }
 
-function validar(v) {
-  const esPlan = v.tipo === TIPO_SERVICIO.PLAN
-  const esTaller = v.tipo === TIPO_SERVICIO.TALLER
+function validar(valores) {
+  const esPlan = valores.tipo === TIPO_SERVICIO.PLAN
+  const esTaller = valores.tipo === TIPO_SERVICIO.TALLER
   return {
-    codigo: validarTexto(v.codigo, { etiqueta: 'El código', minimo: 3, maximo: 10 }),
-    tipo: v.tipo ? '' : 'Selecciona una categoría.',
-    nombre: validarTexto(v.nombre, { etiqueta: 'El nombre', maximo: 100 }),
-    duracion: validarTexto(v.duracion, { etiqueta: 'La duración', maximo: 30, requerido: false }),
-    modalidad: validarTexto(v.modalidad, { etiqueta: 'La modalidad', maximo: 80 }),
-    profesional: validarTexto(v.profesional, { etiqueta: 'El profesional', maximo: 100 }),
-    precio: validarNumero(v.precio, { etiqueta: 'El precio', entero: true }),
-    descuento: validarNumero(v.descuento, { etiqueta: 'El descuento', entero: true, maximo: 100, requerido: false }),
-    sesiones: esPlan ? validarNumero(v.sesiones, { etiqueta: 'La cantidad de sesiones', entero: true, minimo: 1, requerido: false }) : '',
-    cupos: esTaller ? validarNumero(v.cupos, { etiqueta: 'La cantidad de cupos', entero: true, minimo: 1 }) : '',
-    descripcion: validarTexto(v.descripcion, { etiqueta: 'La descripción', maximo: 500, requerido: false }),
+    codigo: validarTexto(valores.codigo, { etiqueta: 'El código', minimo: 3, maximo: 10 }),
+    tipo: valores.tipo ? '' : 'Selecciona una categoría.',
+    nombre: validarTexto(valores.nombre, { etiqueta: 'El nombre', maximo: 100 }),
+    duracion: validarTexto(valores.duracion, { etiqueta: 'La duración', maximo: 30, requerido: false }),
+    modalidad: validarTexto(valores.modalidad, { etiqueta: 'La modalidad', maximo: 80 }),
+    profesional: validarTexto(valores.profesional, { etiqueta: 'El profesional', maximo: 100 }),
+    precio: validarNumero(valores.precio, { etiqueta: 'El precio', entero: true }),
+    descuento: validarNumero(valores.descuento, { etiqueta: 'El descuento', entero: true, maximo: 100, requerido: false }),
+    sesiones: esPlan ? validarNumero(valores.sesiones, { etiqueta: 'La cantidad de sesiones', entero: true, minimo: 1, requerido: false }) : '',
+    cupos: esTaller ? validarNumero(valores.cupos, { etiqueta: 'La cantidad de cupos', entero: true, minimo: 1 }) : '',
+    descripcion: validarTexto(valores.descripcion, { etiqueta: 'La descripción', maximo: 500, requerido: false }),
   }
 }
 
-function detalleDe(s) {
-  if (s.tipo === TIPO_SERVICIO.PLAN) return s.sesiones ? `${s.sesiones} sesiones` : 'Sesiones sin definir'
-  if (s.tipo === TIPO_SERVICIO.TALLER) return `${s.cupos} cupos`
+function detalleDe(servicio) {
+  if (servicio.tipo === TIPO_SERVICIO.PLAN) return servicio.sesiones ? `${servicio.sesiones} sesiones` : 'Sesiones sin definir'
+  if (servicio.tipo === TIPO_SERVICIO.TALLER) return `${servicio.cupos} cupos`
   return '—'
 }
 
@@ -43,7 +43,7 @@ function AdminServicios() {
   const [mensaje, setMensaje] = useState(null)
 
   const refrescar = () => setLista(servicios.listar())
-  const cambiar = (campo) => (e) => setValores((v) => ({ ...v, [campo]: e.target.value }))
+  const cambiar = (campo) => (evento) => setValores((anteriores) => ({ ...anteriores, [campo]: evento.target.value }))
 
   const limpiar = () => {
     setValores(VACIO)
@@ -51,14 +51,14 @@ function AdminServicios() {
     setEnEdicion(null)
   }
 
-  const cargar = (s) => {
-    setEnEdicion(s.codigo)
+  const cargar = (servicio) => {
+    setEnEdicion(servicio.codigo)
     setErrores({})
     setValores({
-      codigo: s.codigo, tipo: s.tipo, nombre: s.nombre, duracion: s.duracion === '—' ? '' : s.duracion ?? '',
-      modalidad: s.modalidad ?? '', profesional: s.profesional ?? '', precio: String(s.precio),
-      descuento: String(s.descuento ?? 0), sesiones: s.sesiones ? String(s.sesiones) : '',
-      cupos: s.cupos ? String(s.cupos) : '', descripcion: s.descripcion ?? '',
+      codigo: servicio.codigo, tipo: servicio.tipo, nombre: servicio.nombre, duracion: servicio.duracion === '—' ? '' : servicio.duracion ?? '',
+      modalidad: servicio.modalidad ?? '', profesional: servicio.profesional ?? '', precio: String(servicio.precio),
+      descuento: String(servicio.descuento ?? 0), sesiones: servicio.sesiones ? String(servicio.sesiones) : '',
+      cupos: servicio.cupos ? String(servicio.cupos) : '', descripcion: servicio.descripcion ?? '',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -99,11 +99,11 @@ function AdminServicios() {
     setMensaje({ tipo: 'success', texto: 'Servicio guardado correctamente.' })
   }
 
-  const eliminar = (s) => {
-    if (!window.confirm(`¿Eliminar "${s.nombre}" del catálogo?`)) return
-    servicios.eliminar(s.codigo)
+  const eliminar = (servicio) => {
+    if (!window.confirm(`¿Eliminar "${servicio.nombre}" del catálogo?`)) return
+    servicios.eliminar(servicio.codigo)
     refrescar()
-    if (enEdicion === s.codigo) limpiar()
+    if (enEdicion === servicio.codigo) limpiar()
     setMensaje({ tipo: 'success', texto: 'Servicio eliminado correctamente.' })
   }
 
@@ -165,20 +165,20 @@ function AdminServicios() {
             <tr><th>Código</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Detalle</th><th>Acciones</th></tr>
           </thead>
           <tbody>
-            {lista.map((s) => (
-              <tr key={s.codigo}>
-                <td>{s.codigo}</td>
-                <td>{s.nombre}</td>
-                <td>{s.tipo}</td>
+            {lista.map((servicio) => (
+              <tr key={servicio.codigo}>
+                <td>{servicio.codigo}</td>
+                <td>{servicio.nombre}</td>
+                <td>{servicio.tipo}</td>
                 <td>
-                  {formatearPrecioCLP(precioFinal(s))}
-                  {s.descuento > 0 && <small className="texto-ayuda d-block">{s.descuento}% de descuento</small>}
+                  {formatearPrecioCLP(precioFinal(servicio))}
+                  {servicio.descuento > 0 && <small className="texto-ayuda d-block">{servicio.descuento}% de descuento</small>}
                 </td>
-                <td className={s.tipo === TIPO_SERVICIO.PLAN && !s.sesiones ? 'text-warning-emphasis' : undefined}>{detalleDe(s)}</td>
+                <td className={servicio.tipo === TIPO_SERVICIO.PLAN && !servicio.sesiones ? 'text-warning-emphasis' : undefined}>{detalleDe(servicio)}</td>
                 <td>
                   <div className="d-flex gap-2 flex-wrap">
-                    <button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(s)}>Editar</button>
-                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(s)}>Eliminar</button>
+                    <button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(servicio)}>Editar</button>
+                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(servicio)}>Eliminar</button>
                   </div>
                 </td>
               </tr>

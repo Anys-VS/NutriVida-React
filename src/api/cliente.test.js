@@ -35,10 +35,10 @@ describe('Cliente HTTP', () => {
       ? { status: 200, data: [{ codigo: 'CO001' }] }
       : { status: 400, data: { mensaje: 'La fecha ya pasó.', errores: { fechaHora: 'Elige una fecha futura' } } }))
 
-    await expect(cliente.get('/servicios').then((r) => r.data)).resolves.toEqual([{ codigo: 'CO001' }])
+    await expect(cliente.get('/servicios').then((respuesta) => respuesta.data)).resolves.toEqual([{ codigo: 'CO001' }])
     expect(peticiones[0].headers.Authorization).toBe('Bearer token-viejo')
 
-    const error = await cliente.post('/citas', {}).catch((e) => e)
+    const error = await cliente.post('/citas', {}).catch((errorRecibido) => errorRecibido)
     expect(error).toBeInstanceOf(ErrorApi)
     expect(error).toMatchObject({ estado: 400, message: 'La fecha ya pasó.', errores: { fechaHora: 'Elige una fecha futura' } })
   })
@@ -51,7 +51,7 @@ describe('Cliente HTTP', () => {
       ? { status: 200, data: { ok: true } }
       : { status: 401, data: {} }))
 
-    await expect(cliente.get('/citas/mias').then((r) => r.data)).resolves.toEqual({ ok: true })
+    await expect(cliente.get('/citas/mias').then((respuesta) => respuesta.data)).resolves.toEqual({ ok: true })
     expect(renovar).toHaveBeenCalledTimes(1)
     expect(peticiones).toHaveLength(2)
   })

@@ -15,16 +15,16 @@ const INICIAL = {
   region: '', comuna: '', direccion: '', contrasena: '',
 }
 
-function validar(v) {
+function validar(valores) {
   return {
-    run: validarRUN(v.run),
-    nombre: validarTexto(v.nombre, { etiqueta: 'El nombre', maximo: 50 }),
-    apellidos: validarTexto(v.apellidos, { etiqueta: 'Los apellidos', maximo: 100 }),
-    correo: validarCorreo(v.correo),
-    region: v.region ? '' : 'Selecciona una región.',
-    comuna: v.comuna ? '' : 'Selecciona una comuna.',
-    direccion: validarTexto(v.direccion, { etiqueta: 'La dirección', maximo: 300 }),
-    contrasena: validarContrasena(v.contrasena),
+    run: validarRUN(valores.run),
+    nombre: validarTexto(valores.nombre, { etiqueta: 'El nombre', maximo: 50 }),
+    apellidos: validarTexto(valores.apellidos, { etiqueta: 'Los apellidos', maximo: 100 }),
+    correo: validarCorreo(valores.correo),
+    region: valores.region ? '' : 'Selecciona una región.',
+    comuna: valores.comuna ? '' : 'Selecciona una comuna.',
+    direccion: validarTexto(valores.direccion, { etiqueta: 'La dirección', maximo: 300 }),
+    contrasena: validarContrasena(valores.contrasena),
   }
 }
 

@@ -25,8 +25,8 @@ export function emitirTokens(usuario, ahora = Date.now()) {
   }
 }
 
-const simularRed = (fn) => new Promise((resolver, rechazar) => {
-  try { resolver(fn()) } catch (error) { rechazar(error) }
+const simularRed = (operacion) => new Promise((resolver, rechazar) => {
+  try { resolver(operacion()) } catch (error) { rechazar(error) }
 })
 
 export const servidorLocal = {
@@ -48,7 +48,7 @@ export const servidorLocal = {
     if (claims?.tipo !== 'renovacion' || !estaVigente(renovacion)) {
       throw new ErrorApi(401, 'Tu sesión expiró. Vuelve a iniciar sesión.', { delServidor: true })
     }
-    const usuario = usuarios.listar().find((u) => u.correo.toLowerCase() === String(claims.sub).toLowerCase())
+    const usuario = usuarios.listar().find((registrado) => registrado.correo.toLowerCase() === String(claims.sub).toLowerCase())
     if (!usuario || usuario.activo === false) {
       throw new ErrorApi(401, 'Tu cuenta ya no tiene acceso. Comunícate con la clínica.', { delServidor: true })
     }

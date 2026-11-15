@@ -27,7 +27,7 @@ function AdminCitas() {
   }, [refrescar])
 
   const nombres = useMemo(
-    () => Object.fromEntries(usuarios.listar().map((u) => [u.correo.toLowerCase(), `${u.nombre} ${u.apellidos}`])),
+    () => Object.fromEntries(usuarios.listar().map((usuario) => [usuario.correo.toLowerCase(), `${usuario.nombre} ${usuario.apellidos}`])),
     [],
   )
 
@@ -41,9 +41,9 @@ function AdminCitas() {
 
   const texto = busqueda.trim().toLowerCase()
   const visibles = lista
-    .filter((c) => estado === 'Todas' || c.estadoCita === estado)
-    .filter((c) => !texto || `${c.pacienteCorreo} ${nombres[c.pacienteCorreo.toLowerCase()] ?? ''} ${c.nombreServicio}`.toLowerCase().includes(texto))
-    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+    .filter((cita) => estado === 'Todas' || cita.estadoCita === estado)
+    .filter((cita) => !texto || `${cita.pacienteCorreo} ${nombres[cita.pacienteCorreo.toLowerCase()] ?? ''} ${cita.nombreServicio}`.toLowerCase().includes(texto))
+    .sort((citaA, citaB) => new Date(citaA.fechaHora) - new Date(citaB.fechaHora))
 
   return (
     <>
@@ -55,14 +55,14 @@ function AdminCitas() {
         <div className="row g-3">
           <div className="col-md-4">
             <label htmlFor="filtro-estado" className="form-label">Estado</label>
-            <select id="filtro-estado" className="form-select" value={estado} onChange={(e) => setEstado(e.target.value)}>
+            <select id="filtro-estado" className="form-select" value={estado} onChange={(evento) => setEstado(evento.target.value)}>
               <option>Todas</option>
-              {Object.values(ESTADO_CITA).map((e) => <option key={e}>{e}</option>)}
+              {Object.values(ESTADO_CITA).map((estadoOpcion) => <option key={estadoOpcion}>{estadoOpcion}</option>)}
             </select>
           </div>
           <div className="col-md-8">
             <label htmlFor="filtro-busqueda" className="form-label">Buscar por paciente o servicio</label>
-            <input id="filtro-busqueda" className="form-control" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <input id="filtro-busqueda" className="form-control" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
           </div>
         </div>
       </div>
@@ -75,35 +75,35 @@ function AdminCitas() {
           </thead>
           <tbody>
             {visibles.length === 0 && <tr><td colSpan={6} className="text-center">No hay citas para mostrar.</td></tr>}
-            {visibles.map((c) => (
-              <tr key={c.id}>
-                <td>{nombres[c.pacienteCorreo.toLowerCase()] ?? c.pacienteCorreo}<br /><small className="texto-ayuda">{c.pacienteCorreo}</small></td>
-                <td>{c.nombreServicio}<br /><small className="texto-ayuda">{c.nutricionista || 'Sin preferencia'}</small></td>
-                <td>{formatearFechaHora(c.fechaHora)}</td>
-                <td><EstadoBadge estado={c.estadoCita} /></td>
-                <td><EstadoBadge estado={c.estadoPago} /><br /><small>{c.planId ? 'Incluida en el plan' : `${formatearPrecioCLP(c.precio)} · ${c.metodoPago}`}</small></td>
+            {visibles.map((cita) => (
+              <tr key={cita.id}>
+                <td>{nombres[cita.pacienteCorreo.toLowerCase()] ?? cita.pacienteCorreo}<br /><small className="texto-ayuda">{cita.pacienteCorreo}</small></td>
+                <td>{cita.nombreServicio}<br /><small className="texto-ayuda">{cita.nutricionista || 'Sin preferencia'}</small></td>
+                <td>{formatearFechaHora(cita.fechaHora)}</td>
+                <td><EstadoBadge estado={cita.estadoCita} /></td>
+                <td><EstadoBadge estado={cita.estadoPago} /><br /><small>{cita.planId ? 'Incluida en el plan' : `${formatearPrecioCLP(cita.precio)} · ${cita.metodoPago}`}</small></td>
                 <td>
                   <div className="d-flex gap-2 flex-wrap">
-                    {c.estadoCita === ESTADO_CITA.CONFIRMADA && (
+                    {cita.estadoCita === ESTADO_CITA.CONFIRMADA && (
                       <>
                         <button type="button" className="btn btn-sm btn-nv-primario"
-                          onClick={() => ejecutar(marcarAtendida(c.id), () => 'Cita marcada como atendida.')}>Atendida</button>
+                          onClick={() => ejecutar(marcarAtendida(cita.id), () => 'Cita marcada como atendida.')}>Atendida</button>
                         <button type="button" className="btn btn-sm btn-nv-secundario"
-                          onClick={conConfirmacion('¿Registrar inasistencia?', () => ejecutar(marcarInasistencia(c.id), () => 'Inasistencia registrada.'))}>Inasistencia</button>
+                          onClick={conConfirmacion('¿Registrar inasistencia?', () => ejecutar(marcarInasistencia(cita.id), () => 'Inasistencia registrada.'))}>Inasistencia</button>
                       </>
                     )}
-                    {[ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(c.estadoCita) && (
+                    {[ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(cita.estadoCita) && (
                       <button type="button" className="btn btn-sm btn-outline-danger"
-                        onClick={conConfirmacion('¿Cancelar esta cita?', () => ejecutar(cancelarPorClinica(c.id), () => 'Cita cancelada.'))}>Cancelar</button>
+                        onClick={conConfirmacion('¿Cancelar esta cita?', () => ejecutar(cancelarPorClinica(cita.id), () => 'Cita cancelada.'))}>Cancelar</button>
                     )}
-                    {c.estadoPago === 'Pendiente' && [ESTADO_CITA.CONFIRMADA, ESTADO_CITA.ATENDIDA].includes(c.estadoCita) && (
+                    {cita.estadoPago === 'Pendiente' && [ESTADO_CITA.CONFIRMADA, ESTADO_CITA.ATENDIDA].includes(cita.estadoCita) && (
                       <button type="button" className="btn btn-sm btn-outline-success"
-                        onClick={() => ejecutar(registrarPagoEnClinica(c.id), () => 'Pago registrado.')}>Registrar pago</button>
+                        onClick={() => ejecutar(registrarPagoEnClinica(cita.id), () => 'Pago registrado.')}>Registrar pago</button>
                     )}
-                    {requiereReembolso(c) && (
+                    {requiereReembolso(cita) && (
                       <button type="button" className="btn btn-sm btn-outline-primary"
-                        onClick={() => ejecutar(registrarReembolso(c.id), (r) => `Reembolso de ${formatearPrecioCLP(r.reembolso)} registrado.`)}>
-                        Reembolsar {formatearPrecioCLP(c.montoPagado)}
+                        onClick={() => ejecutar(registrarReembolso(cita.id), (resultado) => `Reembolso de ${formatearPrecioCLP(resultado.reembolso)} registrado.`)}>
+                        Reembolsar {formatearPrecioCLP(cita.montoPagado)}
                       </button>
                     )}
                   </div>

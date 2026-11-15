@@ -16,6 +16,6 @@ export function useCarga(cargar, dependencias = []) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...dependencias, intento])
 
-  const reintentar = useCallback(() => setIntento((n) => n + 1), [])
+  const reintentar = useCallback(() => setIntento((intentoAnterior) => intentoAnterior + 1), [])
   return { ...estado, reintentar }
 }

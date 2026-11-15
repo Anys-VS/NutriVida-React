@@ -13,8 +13,8 @@ export const cliente = axios.create({
 // Quién renueva el token cuando el backend responde 401. Lo registra servicioAuth al cargarse
 // (así se evita una importación circular entre el cliente y la autenticación).
 let renovar = null
-export function alRenovar(fn) {
-  renovar = fn
+export function alRenovar(funcionRenovar) {
+  renovar = funcionRenovar
 }
 
 // 1) Antes de cada petición se agrega el token de acceso, salvo en login, registro y renovación.

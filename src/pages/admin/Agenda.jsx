@@ -19,15 +19,15 @@ function Agenda() {
   const [filtro, setFiltro] = useState(FILTROS.PROXIMAS)
   const [mensaje, setMensaje] = useState(null)
 
-  const usuariosPorCorreo = Object.fromEntries(usuarios.listar().map((u) => [u.correo.toLowerCase(), u]))
+  const usuariosPorCorreo = Object.fromEntries(usuarios.listar().map((usuario) => [usuario.correo.toLowerCase(), usuario]))
   const hoy = fechaLocalISO()
   const ahora = new Date()
 
-  const visibles = lista.filter((c) => {
-    const fecha = fechaLocalISO(new Date(c.fechaHora))
+  const visibles = lista.filter((cita) => {
+    const fecha = fechaLocalISO(new Date(cita.fechaHora))
     if (filtro === FILTROS.HOY) return fecha === hoy
-    if (filtro === FILTROS.PROXIMAS) return new Date(c.fechaHora) >= ahora && c.estadoCita !== ESTADO_CITA.CANCELADA
-    if (filtro === FILTROS.PASADAS) return new Date(c.fechaHora) < ahora
+    if (filtro === FILTROS.PROXIMAS) return new Date(cita.fechaHora) >= ahora && cita.estadoCita !== ESTADO_CITA.CANCELADA
+    if (filtro === FILTROS.PASADAS) return new Date(cita.fechaHora) < ahora
     return true
   })
 
@@ -47,9 +47,9 @@ function Agenda() {
       {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
 
       <div className="btn-group mb-3 flex-wrap" role="group" aria-label="Filtrar agenda">
-        {Object.values(FILTROS).map((f) => (
-          <button key={f} type="button" className={`btn btn-sm ${filtro === f ? 'btn-nv-primario' : 'btn-nv-secundario'}`}
-            aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{f}</button>
+        {Object.values(FILTROS).map((opcionFiltro) => (
+          <button key={opcionFiltro} type="button" className={`btn btn-sm ${filtro === opcionFiltro ? 'btn-nv-primario' : 'btn-nv-secundario'}`}
+            aria-pressed={filtro === opcionFiltro} onClick={() => setFiltro(opcionFiltro)}>{opcionFiltro}</button>
         ))}
       </div>
 
@@ -61,23 +61,23 @@ function Agenda() {
             <caption className="visually-hidden">Citas de mi agenda</caption>
             <thead><tr><th>Fecha y hora</th><th>Paciente</th><th>Servicio y motivo</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody>
-              {visibles.map((c) => {
-                const paciente = usuariosPorCorreo[c.pacienteCorreo.toLowerCase()]
+              {visibles.map((cita) => {
+                const paciente = usuariosPorCorreo[cita.pacienteCorreo.toLowerCase()]
                 return (
-                  <tr key={c.id}>
-                    <td>{formatearFechaHora(c.fechaHora)}</td>
-                    <td>{paciente ? `${paciente.nombre} ${paciente.apellidos}` : c.pacienteCorreo}</td>
-                    <td>{c.nombreServicio}{c.motivo && <><br /><small className="texto-ayuda">{c.motivo}</small></>}</td>
-                    <td><EstadoBadge estado={c.estadoCita} /></td>
+                  <tr key={cita.id}>
+                    <td>{formatearFechaHora(cita.fechaHora)}</td>
+                    <td>{paciente ? `${paciente.nombre} ${paciente.apellidos}` : cita.pacienteCorreo}</td>
+                    <td>{cita.nombreServicio}{cita.motivo && <><br /><small className="texto-ayuda">{cita.motivo}</small></>}</td>
+                    <td><EstadoBadge estado={cita.estadoCita} /></td>
                     <td>
                       <div className="d-flex flex-wrap gap-2">
                         {paciente && <Link className="btn btn-sm btn-outline-secondary" to={`/admin/pacientes/${paciente.run}`}>Ficha</Link>}
-                        {c.estadoCita === ESTADO_CITA.CONFIRMADA && (
+                        {cita.estadoCita === ESTADO_CITA.CONFIRMADA && (
                           <>
                             <button type="button" className="btn btn-sm btn-nv-primario"
-                              onClick={() => ejecutar(marcarAtendida(c.id), 'Cita marcada como atendida.')}>Atendida</button>
+                              onClick={() => ejecutar(marcarAtendida(cita.id), 'Cita marcada como atendida.')}>Atendida</button>
                             <button type="button" className="btn btn-sm btn-outline-danger"
-                              onClick={() => ejecutar(marcarInasistencia(c.id), 'Inasistencia registrada.')}>Inasistencia</button>
+                              onClick={() => ejecutar(marcarInasistencia(cita.id), 'Inasistencia registrada.')}>Inasistencia</button>
                           </>
                         )}
                       </div>

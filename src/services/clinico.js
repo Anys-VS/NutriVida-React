@@ -6,12 +6,12 @@ import { ESTADO_CITA, ROL } from '../config/reglas'
 import { calcularIMC, puedeEditarFicha, puedeVerFicha, validarMedicion } from '../domain/clinico'
 
 const SIN_PERMISO = { ok: false, motivo: 'No tienes permiso para ver los datos clínicos de este paciente.' }
-const mismoCorreo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase()
+const mismoCorreo = (correoA, correoB) => String(correoA).toLowerCase() === String(correoB).toLowerCase()
 
 // Nombre del profesional que corresponde a la cuenta del nutricionista (se enlazan por correo).
 export function profesionalDeSesion(sesion) {
   if (sesion?.tipoUsuario !== ROL.NUTRICIONISTA) return null
-  return nutricionistas.find((p) => mismoCorreo(p.correo, sesion.correo)) ?? null
+  return nutricionistas.find((profesional) => mismoCorreo(profesional.correo, sesion.correo)) ?? null
 }
 
 const fichaVacia = (pacienteCorreo) => ({
@@ -19,7 +19,7 @@ const fichaVacia = (pacienteCorreo) => ({
 })
 
 function contexto(pacienteCorreo, sesion) {
-  const ficha = fichas.listar().find((f) => mismoCorreo(f.pacienteCorreo, pacienteCorreo)) ?? null
+  const ficha = fichas.listar().find((registro) => mismoCorreo(registro.pacienteCorreo, pacienteCorreo)) ?? null
   const datos = { sesion, pacienteCorreo, ficha, citas: citas.listar(), nombreProfesional: profesionalDeSesion(sesion)?.nombre ?? '' }
   return { ficha, datos }
 }
@@ -27,7 +27,7 @@ function contexto(pacienteCorreo, sesion) {
 export function obtenerFicha(pacienteCorreo, sesion) {
   const { ficha, datos } = contexto(pacienteCorreo, sesion)
   if (!puedeVerFicha(datos)) return SIN_PERMISO
-  const paciente = usuarios.listar().find((u) => mismoCorreo(u.correo, pacienteCorreo)) ?? null
+  const paciente = usuarios.listar().find((usuario) => mismoCorreo(usuario.correo, pacienteCorreo)) ?? null
   return { ok: true, ficha: ficha ?? fichaVacia(pacienteCorreo), paciente, puedeEditar: puedeEditarFicha(datos) }
 }
 
@@ -80,8 +80,8 @@ export function agendaDe(sesion) {
   if (!profesional) return []
   return citas
     .listar()
-    .filter((c) => c.nutricionista === profesional.nombre)
-    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+    .filter((cita) => cita.nutricionista === profesional.nombre)
+    .sort((citaA, citaB) => new Date(citaA.fechaHora) - new Date(citaB.fechaHora))
 }
 
 // Pacientes del nutricionista: los que tiene asignados en su ficha o que atiende o atendió.
@@ -89,15 +89,15 @@ export function pacientesDe(sesion, ahora = new Date()) {
   const profesional = profesionalDeSesion(sesion)
   if (!profesional) return []
   const correos = new Set([
-    ...fichas.listar().filter((f) => f.nutricionista === profesional.nombre).map((f) => f.pacienteCorreo.toLowerCase()),
-    ...agendaDe(sesion).filter((c) => c.estadoCita !== ESTADO_CITA.CANCELADA).map((c) => c.pacienteCorreo.toLowerCase()),
+    ...fichas.listar().filter((ficha) => ficha.nutricionista === profesional.nombre).map((ficha) => ficha.pacienteCorreo.toLowerCase()),
+    ...agendaDe(sesion).filter((cita) => cita.estadoCita !== ESTADO_CITA.CANCELADA).map((cita) => cita.pacienteCorreo.toLowerCase()),
   ])
   const todos = usuarios.listar()
   return [...correos].map((correo) => {
-    const usuario = todos.find((u) => mismoCorreo(u.correo, correo))
+    const usuario = todos.find((candidato) => mismoCorreo(candidato.correo, correo))
     const proxima = agendaDe(sesion).find(
-      (c) => mismoCorreo(c.pacienteCorreo, correo) && new Date(c.fechaHora) >= ahora
-        && [ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(c.estadoCita),
+      (cita) => mismoCorreo(cita.pacienteCorreo, correo) && new Date(cita.fechaHora) >= ahora
+        && [ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(cita.estadoCita),
     )
     return { correo, nombre: usuario ? `${usuario.nombre} ${usuario.apellidos}` : correo, run: usuario?.run ?? '', proxima: proxima ?? null }
   })

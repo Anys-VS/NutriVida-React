@@ -42,15 +42,15 @@ function Nosotros() {
           <h2 className="titulo-seccion">Nuestro equipo</h2>
           <p className="intro-seccion">Cuatro nutricionistas, cada uno con su propia área de especialización y horario de atención.</p>
           <ul className="row g-4 list-unstyled">
-            {nutricionistas.map((n) => (
-              <li key={n.id} className="col-md-6">
+            {nutricionistas.map((profesional) => (
+              <li key={profesional.id} className="col-md-6">
                 <article className="tarjeta-nutricionista">
-                  <div className="avatar-iniciales">{iniciales(n.nombre)}</div>
+                  <div className="avatar-iniciales">{iniciales(profesional.nombre)}</div>
                   <div>
-                    <h3>{n.nombre}</h3>
-                    <p className="especialidad">{n.especialidad}</p>
-                    <p>{DETALLE[n.id]}</p>
-                    <p className="horario">Atiende {describirHorario(n)}</p>
+                    <h3>{profesional.nombre}</h3>
+                    <p className="especialidad">{profesional.especialidad}</p>
+                    <p>{DETALLE[profesional.id]}</p>
+                    <p className="horario">Atiende {describirHorario(profesional)}</p>
                   </div>
                 </article>
               </li>

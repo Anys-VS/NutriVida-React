@@ -20,9 +20,9 @@ const servidorApi = {
 const servidor = () => (usaApi() ? servidorApi : servidorLocal)
 
 function resultadoError(error, mensaje401) {
-  const e = normalizarError(error)
-  const motivo = e.estado === 401 && !e.delServidor ? mensaje401 : e.message
-  return { ok: false, motivo, errores: e.errores }
+  const errorNormalizado = normalizarError(error)
+  const motivo = errorNormalizado.estado === 401 && !errorNormalizado.delServidor ? mensaje401 : errorNormalizado.message
+  return { ok: false, motivo, errores: errorNormalizado.errores }
 }
 
 export async function iniciarSesion(correo, contrasena) {

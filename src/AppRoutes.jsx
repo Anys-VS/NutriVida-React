@@ -82,7 +82,7 @@ function AppRoutes() {
 
       <Route path="admin" element={protegida('panel:acceder', <Suspense fallback={<p className="container seccion texto-ayuda" role="status">Cargando panel…</p>}><LayoutAdmin /></Suspense>)}>
         {/* El resumen es del administrador; los demás roles del panel entran directo a su página inicial. */}
-        <Route index element={<RutaProtegida permiso="panel:resumen" redirigir={(s) => rutaInicialPorRol(s.tipoUsuario)}><Dashboard /></RutaProtegida>} />
+        <Route index element={<RutaProtegida permiso="panel:resumen" redirigir={(sesionActual) => rutaInicialPorRol(sesionActual.tipoUsuario)}><Dashboard /></RutaProtegida>} />
         <Route path="citas" element={protegida('citas:gestionar', <AdminCitas />)} />
         <Route path="agenda" element={protegida('agenda:propia', <Agenda />)} />
         <Route path="pacientes" element={protegida('fichas:gestionar', <Pacientes />)} />
