@@ -3,7 +3,7 @@ import { articulos } from '../data/blog'
 
 function ArticuloBlog() {
   const { id } = useParams()
-  const articulo = articulos.find((a) => a.id === id)
+  const articulo = articulos.find((entrada) => entrada.id === id)
 
   if (!articulo) {
     return (

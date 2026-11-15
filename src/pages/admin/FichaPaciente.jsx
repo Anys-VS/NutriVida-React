@@ -36,26 +36,26 @@ function FichaPaciente() {
     )
   }
 
-  const cambiarMedicion = (campo) => (e) => setMedicion((m) => ({ ...m, [campo]: e.target.value }))
-  const cambiarDatos = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value }))
+  const cambiarMedicion = (campo) => (evento) => setMedicion((medicionAnterior) => ({ ...medicionAnterior, [campo]: evento.target.value }))
+  const cambiarDatos = (campo) => (evento) => setDatos((datosAnteriores) => ({ ...datosAnteriores, [campo]: evento.target.value }))
   const imcPrevio = calcularIMC(medicion.peso, medicion.talla)
 
   const guardarMedicion = (evento) => {
     evento.preventDefault()
-    const r = registrarMedicion(paciente.correo, medicion, sesion)
-    setErroresMedicion(r.errores ?? {})
-    setMensaje(r.ok ? { tipo: 'success', texto: 'Medición registrada. El paciente ya la ve en "Mi progreso".' } : { tipo: 'danger', texto: r.motivo })
-    if (r.ok) {
+    const resultado = registrarMedicion(paciente.correo, medicion, sesion)
+    setErroresMedicion(resultado.errores ?? {})
+    setMensaje(resultado.ok ? { tipo: 'success', texto: 'Medición registrada. El paciente ya la ve en "Mi progreso".' } : { tipo: 'danger', texto: resultado.motivo })
+    if (resultado.ok) {
       setMedicion({ ...MEDICION_VACIA, talla: medicion.talla })
-      setVersion((v) => v + 1)
+      setVersion((versionAnterior) => versionAnterior + 1)
     }
   }
 
   const guardarDatos = (evento) => {
     evento.preventDefault()
-    const r = guardarDatosFicha(paciente.correo, datos, sesion)
-    setMensaje(r.ok ? { tipo: 'success', texto: 'Ficha y plan alimenticio guardados.' } : { tipo: 'danger', texto: r.motivo })
-    if (r.ok) setVersion((v) => v + 1)
+    const resultado = guardarDatosFicha(paciente.correo, datos, sesion)
+    setMensaje(resultado.ok ? { tipo: 'success', texto: 'Ficha y plan alimenticio guardados.' } : { tipo: 'danger', texto: resultado.motivo })
+    if (resultado.ok) setVersion((versionAnterior) => versionAnterior + 1)
   }
 
   return (

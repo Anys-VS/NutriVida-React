@@ -6,7 +6,7 @@ describe('talleresCriticos', () => {
   it('lista solo los talleres futuros con pocos cupos restantes', () => {
     const ahora = new Date('2026-11-10T10:00:00')
     const fechaHora = new Date('2026-11-20T10:00:00').toISOString()
-    const activas = (codigo, n) => Array.from({ length: n }, () => ({ codigoServicio: codigo, fechaHora, estadoCita: 'Confirmada' }))
+    const activas = (codigo, cantidad) => Array.from({ length: cantidad }, () => ({ codigoServicio: codigo, fechaHora, estadoCita: 'Confirmada' }))
     const citas = [
       ...activas('TG002', 7), // taller de 8 cupos: queda 1
       { codigoServicio: 'TG002', fechaHora, estadoCita: 'Cancelada' }, // no ocupa cupo

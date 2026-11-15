@@ -35,9 +35,12 @@ function OrdenConfirmada() {
             </thead>
             <tbody>
               {orden.detalle.map((linea) => (
-                <tr key={linea.citaId}>
-                  <td>{linea.nombreServicio}{linea.planId && <><br /><small className="texto-ayuda">Plan: primera sesión</small></>}</td>
-                  <td>{formatearFechaHora(linea.fechaHora)}</td>
+                <tr key={linea.citaId ?? linea.planId}>
+                  <td>
+                    {linea.nombreServicio}
+                    {linea.planId && <><br /><small className="texto-ayuda">{linea.fechaHora ? 'Plan: primera sesión' : 'Plan: sesiones por agendar'}</small></>}
+                  </td>
+                  <td>{linea.fechaHora ? formatearFechaHora(linea.fechaHora) : 'Por agendar'}</td>
                   <td>{linea.nutricionista || 'Por asignar'}</td>
                   <td className="text-end">{formatearPrecioCLP(linea.precio)}</td>
                 </tr>

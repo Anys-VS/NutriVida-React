@@ -6,7 +6,7 @@ import { ESTADO_CITA } from '../config/reglas'
 describe('buscador de especialistas', () => {
   // Prueba 27: búsqueda sin tildes, por especialidad y por día de atención
   it('filtra por texto libre, especialidad y día', () => {
-    const nombres = (filtros) => buscarProfesionales(nutricionistas, filtros).map((p) => p.nombre)
+    const nombres = (filtros) => buscarProfesionales(nutricionistas, filtros).map((profesional) => profesional.nombre)
 
     expect(nombres({ texto: 'PEDIATRICA' })).toEqual(['Felipe Araya'])
     expect(nombres({ texto: 'vegana' })).toEqual(['Daniela Morales'])
@@ -18,7 +18,7 @@ describe('buscador de especialistas', () => {
 
   // Prueba 28: jornada real de cada profesional
   it('arma los bloques y el texto del horario desde la jornada', () => {
-    const rodrigo = nutricionistas.find((p) => p.nombre === 'Rodrigo Sepúlveda')
+    const rodrigo = nutricionistas.find((profesional) => profesional.nombre === 'Rodrigo Sepúlveda')
     expect(bloquesDeJornada(rodrigo)).toEqual(['09:00', '10:00', '11:00', '12:00', '13:00'])
     expect(describirHorario(rodrigo)).toBe('Mar, jue y sáb · 09:00–14:00')
   })
@@ -41,7 +41,7 @@ describe('disponibilidad con horarios reales', () => {
 
   // Prueba 30: próximos horarios para el buscador
   it('entrega los próximos horarios libres saltando los días en que no atiende', () => {
-    const carolina = nutricionistas.find((p) => p.nombre === 'Carolina Fuentes')
+    const carolina = nutricionistas.find((profesional) => profesional.nombre === 'Carolina Fuentes')
     const libres = proximosHorarios({ profesional: carolina, citas: [], ahora: new Date('2026-11-10T08:00:00') })
     expect(libres).toEqual([
       { fecha: '2026-11-11', hora: '09:00' },

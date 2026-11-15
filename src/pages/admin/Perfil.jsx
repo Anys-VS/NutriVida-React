@@ -13,7 +13,7 @@ function Perfil() {
 
   if (!actual) return <p className="mensaje-detalle-error">No encontramos tu cuenta.</p>
 
-  const cambiar = (campo) => (e) => setValores((v) => ({ ...v, [campo]: e.target.value }))
+  const cambiar = (campo) => (evento) => setValores((anteriores) => ({ ...anteriores, [campo]: evento.target.value }))
 
   const guardar = async (evento) => {
     evento.preventDefault()
@@ -28,7 +28,7 @@ function Perfil() {
     if (valores.contrasena) cambios.contrasena = valores.contrasena
     usuarios.actualizar(actual.run, cambios)
     await renovar() // el token nuevo trae el nombre actualizado que se muestra en la sesión
-    setValores((v) => ({ ...v, contrasena: '' }))
+    setValores((anteriores) => ({ ...anteriores, contrasena: '' }))
     setMensaje({ tipo: 'success', texto: 'Perfil actualizado correctamente.' })
   }
 

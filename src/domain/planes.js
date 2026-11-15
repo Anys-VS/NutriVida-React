@@ -4,8 +4,8 @@ const ACTIVAS = [ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA]
 
 // RN-13: una sesión Atendida se descuenta del saldo; una Cancelada o con Inasistencia vuelve a él.
 export function resumenSesiones(plan, sesiones) {
-  const atendidas = sesiones.filter((s) => s.estadoCita === ESTADO_CITA.ATENDIDA).length
-  const agendadas = sesiones.filter((s) => ACTIVAS.includes(s.estadoCita)).length
+  const atendidas = sesiones.filter((sesionPlan) => sesionPlan.estadoCita === ESTADO_CITA.ATENDIDA).length
+  const agendadas = sesiones.filter((sesionPlan) => ACTIVAS.includes(sesionPlan.estadoCita)).length
   return {
     total: plan.sesionesTotales,
     atendidas,

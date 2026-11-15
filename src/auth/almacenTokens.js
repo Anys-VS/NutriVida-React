@@ -23,7 +23,7 @@ export function obtenerTokens() {
 }
 
 function avisar(evento) {
-  suscriptores.forEach((fn) => fn(evento))
+  suscriptores.forEach((avisarSuscriptor) => avisarSuscriptor(evento))
 }
 
 export function guardarTokens({ acceso, renovacion }) {
@@ -45,7 +45,7 @@ export function borrarAcceso() {
   avisar({ tipo: 'guardado' })
 }
 
-export function suscribir(fn) {
-  suscriptores.add(fn)
-  return () => suscriptores.delete(fn)
+export function suscribir(alCambiar) {
+  suscriptores.add(alCambiar)
+  return () => suscriptores.delete(alCambiar)
 }

@@ -7,8 +7,8 @@ import { buscarProfesionales, describirHorario, iniciales, NOMBRES_DIAS } from '
 
 const formatoDia = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: 'numeric', month: 'short' })
 const fechaCorta = (fecha) => {
-  const [a, m, d] = fecha.split('-').map(Number)
-  return formatoDia.format(new Date(a, m - 1, d))
+  const [anio, mes, dia] = fecha.split('-').map(Number)
+  return formatoDia.format(new Date(anio, mes - 1, dia))
 }
 
 // Buscador de especialistas: filtra por texto, especialidad y día, y muestra los próximos horarios libres.
@@ -26,7 +26,7 @@ function Especialistas() {
   }
   const limpiar = () => setParams({}, { replace: true })
 
-  const especialidades = [...new Set(nutricionistas.map((n) => n.especialidad))]
+  const especialidades = [...new Set(nutricionistas.map((profesional) => profesional.especialidad))]
   const resultados = useMemo(
     () => buscarProfesionales(nutricionistas, { texto, especialidad, dia }),
     [texto, especialidad, dia],
@@ -42,7 +42,7 @@ function Especialistas() {
           quien prefieras.
         </p>
 
-        <form className="tarjeta-formulario mb-4" role="search" onSubmit={(e) => e.preventDefault()}>
+        <form className="tarjeta-formulario mb-4" role="search" onSubmit={(evento) => evento.preventDefault()}>
           <div className="row g-3 align-items-end">
             <div className="col-md-5">
               <label htmlFor="buscar-texto" className="form-label">Buscar</label>
@@ -53,14 +53,14 @@ function Especialistas() {
               <label htmlFor="buscar-especialidad" className="form-label">Especialidad</label>
               <select id="buscar-especialidad" className="form-select" value={especialidad} onChange={cambiar('especialidad')}>
                 <option value="">Todas</option>
-                {especialidades.map((e) => <option key={e}>{e}</option>)}
+                {especialidades.map((especialidad) => <option key={especialidad}>{especialidad}</option>)}
               </select>
             </div>
             <div className="col-md-3">
               <label htmlFor="buscar-dia" className="form-label">Día de atención</label>
               <select id="buscar-dia" className="form-select" value={dia} onChange={cambiar('dia')}>
                 <option value="">Cualquier día</option>
-                {[1, 2, 3, 4, 5, 6].map((d) => <option key={d} value={d}>{NOMBRES_DIAS[d]}</option>)}
+                {[1, 2, 3, 4, 5, 6].map((numeroDia) => <option key={numeroDia} value={numeroDia}>{NOMBRES_DIAS[numeroDia]}</option>)}
               </select>
             </div>
           </div>
@@ -77,35 +77,35 @@ function Especialistas() {
           </div>
         ) : (
           <ul className="row g-4 list-unstyled">
-            {resultados.map((p) => {
-              const libres = proximosHorarios({ profesional: p, citas: todasLasCitas })
+            {resultados.map((profesional) => {
+              const libres = proximosHorarios({ profesional: profesional, citas: todasLasCitas })
               return (
-                <li key={p.id} className="col-md-6">
+                <li key={profesional.id} className="col-md-6">
                   <article className="tarjeta-formulario h-100 d-flex flex-column">
                     <div className="d-flex gap-3 align-items-center mb-2">
-                      <div className="avatar-iniciales flex-shrink-0">{iniciales(p.nombre)}</div>
+                      <div className="avatar-iniciales flex-shrink-0">{iniciales(profesional.nombre)}</div>
                       <div>
-                        <h2 className="h5 mb-0">{p.nombre}</h2>
-                        <p className="especialidad mb-0">{p.especialidad}</p>
+                        <h2 className="h5 mb-0">{profesional.nombre}</h2>
+                        <p className="especialidad mb-0">{profesional.especialidad}</p>
                       </div>
                     </div>
-                    <p className="mb-2">{p.resena}</p>
-                    <p className="texto-ayuda mb-2">Atiende {describirHorario(p)}</p>
+                    <p className="mb-2">{profesional.resena}</p>
+                    <p className="texto-ayuda mb-2">Atiende {describirHorario(profesional)}</p>
                     <p className="mb-1"><strong>Próximos horarios libres</strong></p>
                     {libres.length === 0 ? (
                       <p className="texto-ayuda">Sin horarios libres en las próximas dos semanas.</p>
                     ) : (
                       <ul className="list-unstyled d-flex flex-wrap gap-2 mb-3">
-                        {libres.map((h) => (
-                          <li key={`${h.fecha}-${h.hora}`}>
-                            <span className="badge text-bg-light border">{fechaCorta(h.fecha)} · {h.hora}</span>
+                        {libres.map((horario) => (
+                          <li key={`${horario.fecha}-${horario.hora}`}>
+                            <span className="badge text-bg-light border">{fechaCorta(horario.fecha)} · {horario.hora}</span>
                           </li>
                         ))}
                       </ul>
                     )}
                     <div className="mt-auto">
-                      <Link to={`/reservar?nutricionista=${encodeURIComponent(p.nombre)}`} className="btn btn-nv-primario">
-                        Reservar con {p.nombre.split(' ')[0]}
+                      <Link to={`/reservar?nutricionista=${encodeURIComponent(profesional.nombre)}`} className="btn btn-nv-primario">
+                        Reservar con {profesional.nombre.split(' ')[0]}
                       </Link>
                     </div>
                   </article>

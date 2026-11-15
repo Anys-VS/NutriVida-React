@@ -11,7 +11,7 @@ function Categorias() {
         <p className="intro-seccion">Explora nuestros servicios según lo que necesitas.</p>
         <ul className="row g-4 list-unstyled">
           {categorias.listar().map((categoria) => {
-            const cantidad = todos.filter((s) => s.tipo === categoria.tipo).length
+            const cantidad = todos.filter((servicio) => servicio.tipo === categoria.tipo).length
             return (
               <li key={categoria.slug} className="col-md-6 col-lg-3">
                 <article className="tarjeta-beneficio">

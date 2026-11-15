@@ -5,7 +5,7 @@ import { precioFinal } from '../domain/precios'
 
 function Ofertas() {
   const navigate = useNavigate()
-  const enOferta = servicios.listar().filter((s) => precioFinal(s) < s.precio)
+  const enOferta = servicios.listar().filter((servicio) => precioFinal(servicio) < servicio.precio)
 
   return (
     <section className="seccion">

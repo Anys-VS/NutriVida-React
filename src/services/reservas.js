@@ -71,8 +71,8 @@ export function citasDePaciente(correo) {
   const buscado = String(correo).toLowerCase()
   return citas
     .listar()
-    .filter((c) => c.pacienteCorreo.toLowerCase() === buscado)
-    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+    .filter((cita) => cita.pacienteCorreo.toLowerCase() === buscado)
+    .sort((citaA, citaB) => new Date(citaA.fechaHora) - new Date(citaB.fechaHora))
 }
 
 // RN-06: cancela las citas "Por confirmar" cuyo plazo venció y libera su horario.
@@ -153,7 +153,7 @@ export function reprogramarCita(id, { fechaHora, nutricionista = '' }, ahora = n
 
   const cambios = {
     fechaHora: new Date(fechaHora).toISOString(),
-    nutricionista: asignarNutricionista({ servicio, nutricionista, fechaHora, citas: citas.listar().filter((c) => c.id !== id) }),
+    nutricionista: asignarNutricionista({ servicio, nutricionista, fechaHora, citas: citas.listar().filter((otraCita) => otraCita.id !== id) }),
     nutricionistaPreferido: Boolean(nutricionista),
     fechaHoraAnterior: cita.fechaHora,
     reprogramaciones: (cita.reprogramaciones ?? 0) + 1,

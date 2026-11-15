@@ -1,8 +1,8 @@
 import { calcularIMC, clasificarIMC, ordenarPorFecha, resumenProgreso } from '../domain/clinico'
 
 const fechaCorta = (iso) => {
-  const [a, m, d] = iso.split('-').map(Number)
-  return new Date(a, m - 1, d).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
+  const [anio, mes, dia] = iso.split('-').map(Number)
+  return new Date(anio, mes - 1, dia).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: '2-digit' })
 }
 const signo = (valor, unidad) => (valor === null ? '—' : `${valor > 0 ? '+' : ''}${valor} ${unidad}`)
 
@@ -13,26 +13,26 @@ function GraficoPeso({ mediciones }) {
   const ancho = 560
   const alto = 180
   const margen = { x: 44, y: 24 }
-  const pesos = puntos.map((p) => p.peso)
+  const pesos = puntos.map((punto) => punto.peso)
   const minimo = Math.floor(Math.min(...pesos) - 1)
   const maximo = Math.ceil(Math.max(...pesos) + 1)
-  const x = (i) => margen.x + (i * (ancho - margen.x * 2)) / (puntos.length - 1)
-  const y = (peso) => alto - margen.y - ((peso - minimo) * (alto - margen.y * 2)) / (maximo - minimo)
-  const linea = puntos.map((p, i) => `${x(i)},${y(p.peso)}`).join(' ')
+  const posicionX = (indice) => margen.x + (indice * (ancho - margen.x * 2)) / (puntos.length - 1)
+  const posicionY = (peso) => alto - margen.y - ((peso - minimo) * (alto - margen.y * 2)) / (maximo - minimo)
+  const linea = puntos.map((punto, indice) => `${posicionX(indice)},${posicionY(punto.peso)}`).join(' ')
 
   return (
     <figure className="mb-3">
       <svg viewBox={`0 0 ${ancho} ${alto}`} className="grafico-progreso" role="img"
         aria-label={`Evolución del peso: de ${puntos[0].peso} kg a ${puntos.at(-1).peso} kg`}>
         <line x1={margen.x} y1={alto - margen.y} x2={ancho - margen.x} y2={alto - margen.y} className="eje" />
-        <text x={margen.x - 8} y={y(maximo)} className="etiqueta-eje" textAnchor="end">{maximo}</text>
-        <text x={margen.x - 8} y={y(minimo)} className="etiqueta-eje" textAnchor="end">{minimo}</text>
+        <text x={margen.x - 8} y={posicionY(maximo)} className="etiqueta-eje" textAnchor="end">{maximo}</text>
+        <text x={margen.x - 8} y={posicionY(minimo)} className="etiqueta-eje" textAnchor="end">{minimo}</text>
         <polyline points={linea} className="linea" />
-        {puntos.map((p, i) => (
-          <g key={p.id}>
-            <circle cx={x(i)} cy={y(p.peso)} r="5" className="punto" />
-            <text x={x(i)} y={y(p.peso) - 10} textAnchor="middle" className="valor">{p.peso}</text>
-            <text x={x(i)} y={alto - 6} textAnchor="middle" className="etiqueta-eje">{fechaCorta(p.fecha)}</text>
+        {puntos.map((punto, indice) => (
+          <g key={punto.id}>
+            <circle cx={posicionX(indice)} cy={posicionY(punto.peso)} r="5" className="punto" />
+            <text x={posicionX(indice)} y={posicionY(punto.peso) - 10} textAnchor="middle" className="valor">{punto.peso}</text>
+            <text x={posicionX(indice)} y={alto - 6} textAnchor="middle" className="etiqueta-eje">{fechaCorta(punto.fecha)}</text>
           </g>
         ))}
       </svg>
@@ -62,15 +62,15 @@ function ProgresoPaciente({ mediciones }) {
             <tr><th>Fecha</th><th>Peso</th><th>Talla</th><th>Cintura</th><th>IMC</th><th>Nota</th><th>Registró</th></tr>
           </thead>
           <tbody>
-            {ordenarPorFecha(mediciones).reverse().map((m) => (
-              <tr key={m.id}>
-                <td>{fechaCorta(m.fecha)}</td>
-                <td>{m.peso} kg</td>
-                <td>{m.talla} cm</td>
-                <td>{m.cintura ? `${m.cintura} cm` : '—'}</td>
-                <td>{m.imc ?? calcularIMC(m.peso, m.talla)}</td>
-                <td>{m.nota || '—'}</td>
-                <td>{m.nutricionista}</td>
+            {ordenarPorFecha(mediciones).reverse().map((medicion) => (
+              <tr key={medicion.id}>
+                <td>{fechaCorta(medicion.fecha)}</td>
+                <td>{medicion.peso} kg</td>
+                <td>{medicion.talla} cm</td>
+                <td>{medicion.cintura ? `${medicion.cintura} cm` : '—'}</td>
+                <td>{medicion.imc ?? calcularIMC(medicion.peso, medicion.talla)}</td>
+                <td>{medicion.nota || '—'}</td>
+                <td>{medicion.nutricionista}</td>
               </tr>
             ))}
           </tbody>

@@ -13,18 +13,18 @@ const VACIO = {
   region: '', comuna: '', direccion: '', contrasena: '',
 }
 
-function validar(v, enEdicion) {
+function validar(valores, enEdicion) {
   return {
-    run: enEdicion ? '' : validarRUN(v.run),
-    nombre: validarTexto(v.nombre, { etiqueta: 'El nombre', maximo: 50 }),
-    apellidos: validarTexto(v.apellidos, { etiqueta: 'Los apellidos', maximo: 100 }),
-    correo: validarCorreo(v.correo),
-    tipoUsuario: v.tipoUsuario ? '' : 'Selecciona un tipo de usuario.',
-    region: v.region ? '' : 'Selecciona una región.',
-    comuna: v.comuna ? '' : 'Selecciona una comuna.',
-    direccion: validarTexto(v.direccion, { etiqueta: 'La dirección', maximo: 300 }),
+    run: enEdicion ? '' : validarRUN(valores.run),
+    nombre: validarTexto(valores.nombre, { etiqueta: 'El nombre', maximo: 50 }),
+    apellidos: validarTexto(valores.apellidos, { etiqueta: 'Los apellidos', maximo: 100 }),
+    correo: validarCorreo(valores.correo),
+    tipoUsuario: valores.tipoUsuario ? '' : 'Selecciona un tipo de usuario.',
+    region: valores.region ? '' : 'Selecciona una región.',
+    comuna: valores.comuna ? '' : 'Selecciona una comuna.',
+    direccion: validarTexto(valores.direccion, { etiqueta: 'La dirección', maximo: 300 }),
     // Al editar, la contraseña vacía conserva la actual.
-    contrasena: enEdicion && !v.contrasena ? '' : validarContrasena(v.contrasena),
+    contrasena: enEdicion && !valores.contrasena ? '' : validarContrasena(valores.contrasena),
   }
 }
 
@@ -38,9 +38,9 @@ function AdminUsuarios() {
 
   const refrescar = () => setLista(usuarios.listar())
 
-  const cambiar = (campo) => (e) => {
-    const valor = e.target.value
-    setValores((v) => ({ ...v, [campo]: valor, ...(campo === 'region' ? { comuna: '' } : {}) }))
+  const cambiar = (campo) => (evento) => {
+    const valor = evento.target.value
+    setValores((anteriores) => ({ ...anteriores, [campo]: valor, ...(campo === 'region' ? { comuna: '' } : {}) }))
   }
 
   const limpiar = () => {
@@ -49,12 +49,12 @@ function AdminUsuarios() {
     setEnEdicion(null)
   }
 
-  const cargar = (u) => {
-    setEnEdicion(u.run)
+  const cargar = (usuario) => {
+    setEnEdicion(usuario.run)
     setErrores({})
     setValores({
-      run: u.run, nombre: u.nombre, apellidos: u.apellidos, correo: u.correo, fechaNacimiento: u.fechaNacimiento ?? '',
-      tipoUsuario: u.tipoUsuario, region: u.region ?? '', comuna: u.comuna ?? '', direccion: u.direccion ?? '', contrasena: '',
+      run: usuario.run, nombre: usuario.nombre, apellidos: usuario.apellidos, correo: usuario.correo, fechaNacimiento: usuario.fechaNacimiento ?? '',
+      tipoUsuario: usuario.tipoUsuario, region: usuario.region ?? '', comuna: usuario.comuna ?? '', direccion: usuario.direccion ?? '', contrasena: '',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -77,20 +77,20 @@ function AdminUsuarios() {
     setMensaje({ tipo: 'success', texto: 'Usuario guardado correctamente.' })
   }
 
-  const eliminar = (u) => {
-    if (!window.confirm(`¿Eliminar a ${u.nombre} ${u.apellidos}?`)) return
-    const resultado = eliminarUsuario(u.run, sesion)
+  const eliminar = (usuario) => {
+    if (!window.confirm(`¿Eliminar a ${usuario.nombre} ${usuario.apellidos}?`)) return
+    const resultado = eliminarUsuario(usuario.run, sesion)
     setMensaje(resultado.ok
       ? { tipo: 'success', texto: 'Usuario eliminado correctamente.' }
       : { tipo: 'danger', texto: resultado.motivo })
     refrescar()
-    if (resultado.ok && enEdicion === u.run) limpiar()
+    if (resultado.ok && enEdicion === usuario.run) limpiar()
   }
 
-  const alternarEstado = (u) => {
-    const activar = u.activo === false
-    if (!activar && !window.confirm(`¿Desactivar a ${u.nombre} ${u.apellidos}? No podrá iniciar sesión.`)) return
-    const resultado = cambiarEstadoUsuario(u.run, activar, sesion)
+  const alternarEstado = (usuario) => {
+    const activar = usuario.activo === false
+    if (!activar && !window.confirm(`¿Desactivar a ${usuario.nombre} ${usuario.apellidos}? No podrá iniciar sesión.`)) return
+    const resultado = cambiarEstadoUsuario(usuario.run, activar, sesion)
     setMensaje(resultado.ok
       ? { tipo: 'success', texto: activar ? 'Usuario activado.' : 'Usuario desactivado. Su historial se conserva.' }
       : { tipo: 'danger', texto: resultado.motivo })
@@ -154,26 +154,26 @@ function AdminUsuarios() {
             <tr><th>RUN</th><th>Nombre</th><th>Correo</th><th>Tipo</th><th>Estado</th><th>Ubicación</th><th>Acciones</th></tr>
           </thead>
           <tbody>
-            {lista.map((u) => (
-              <tr key={u.run} className={u.activo === false ? 'fila-inactiva' : undefined}>
-                <td>{u.run}</td>
-                <td>{u.nombre} {u.apellidos}</td>
-                <td>{u.correo}</td>
-                <td>{u.tipoUsuario}</td>
+            {lista.map((usuario) => (
+              <tr key={usuario.run} className={usuario.activo === false ? 'fila-inactiva' : undefined}>
+                <td>{usuario.run}</td>
+                <td>{usuario.nombre} {usuario.apellidos}</td>
+                <td>{usuario.correo}</td>
+                <td>{usuario.tipoUsuario}</td>
                 <td>
-                  <span className={`badge text-bg-${u.activo === false ? 'secondary' : 'success'}`}>
-                    {u.activo === false ? 'Inactivo' : 'Activo'}
+                  <span className={`badge text-bg-${usuario.activo === false ? 'secondary' : 'success'}`}>
+                    {usuario.activo === false ? 'Inactivo' : 'Activo'}
                   </span>
                 </td>
-                <td>{u.region} · {u.comuna}</td>
+                <td>{usuario.region} · {usuario.comuna}</td>
                 <td>
                   <div className="d-flex gap-2 flex-wrap">
-                    <Link className="btn btn-sm btn-outline-secondary" to={`/admin/usuarios/${u.run}/historial`}>Historial</Link>
-                    <button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(u)}>Editar</button>
-                    <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => alternarEstado(u)}>
-                      {u.activo === false ? 'Activar' : 'Desactivar'}
+                    <Link className="btn btn-sm btn-outline-secondary" to={`/admin/usuarios/${usuario.run}/historial`}>Historial</Link>
+                    <button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(usuario)}>Editar</button>
+                    <button type="button" className="btn btn-sm btn-outline-warning" onClick={() => alternarEstado(usuario)}>
+                      {usuario.activo === false ? 'Activar' : 'Desactivar'}
                     </button>
-                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(u)}>Eliminar</button>
+                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => eliminar(usuario)}>Eliminar</button>
                   </div>
                 </td>
               </tr>

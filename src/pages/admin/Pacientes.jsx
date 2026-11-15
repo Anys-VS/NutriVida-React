@@ -10,7 +10,7 @@ function Pacientes() {
   const { sesion } = useSesion()
   const [busqueda, setBusqueda] = useState('')
   const lista = pacientesDe(sesion)
-  const visibles = lista.filter((p) => normalizar(`${p.nombre} ${p.correo}`).includes(normalizar(busqueda)))
+  const visibles = lista.filter((paciente) => normalizar(`${paciente.nombre} ${paciente.correo}`).includes(normalizar(busqueda)))
 
   return (
     <>
@@ -19,7 +19,7 @@ function Pacientes() {
       <div className="mb-3">
         <label htmlFor="buscar-paciente" className="form-label">Buscar paciente</label>
         <input id="buscar-paciente" type="search" className="form-control" value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)} placeholder="Nombre o correo" />
+          onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre o correo" />
       </div>
       {visibles.length === 0 ? (
         <p className="tarjeta-formulario">No hay pacientes que coincidan.</p>
@@ -29,12 +29,12 @@ function Pacientes() {
             <caption className="visually-hidden">Mis pacientes</caption>
             <thead><tr><th>Paciente</th><th>Correo</th><th>Próxima cita</th><th></th></tr></thead>
             <tbody>
-              {visibles.map((p) => (
-                <tr key={p.correo}>
-                  <td>{p.nombre}</td>
-                  <td>{p.correo}</td>
-                  <td>{p.proxima ? formatearFechaHora(p.proxima.fechaHora) : '—'}</td>
-                  <td>{p.run && <Link className="btn btn-sm btn-nv-primario" to={`/admin/pacientes/${p.run}`}>Ver ficha</Link>}</td>
+              {visibles.map((paciente) => (
+                <tr key={paciente.correo}>
+                  <td>{paciente.nombre}</td>
+                  <td>{paciente.correo}</td>
+                  <td>{paciente.proxima ? formatearFechaHora(paciente.proxima.fechaHora) : '—'}</td>
+                  <td>{paciente.run && <Link className="btn btn-sm btn-nv-primario" to={`/admin/pacientes/${paciente.run}`}>Ver ficha</Link>}</td>
                 </tr>
               ))}
             </tbody>
