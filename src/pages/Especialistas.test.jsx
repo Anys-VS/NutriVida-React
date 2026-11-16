@@ -11,7 +11,8 @@ describe('Especialistas', () => {
   // Prueba 44: el buscador filtra mientras se escribe y enlaza a la reserva con ese profesional
   it('filtra por texto y ofrece reservar con el especialista encontrado', async () => {
     render(<MemoryRouter initialEntries={['/especialistas']}><Especialistas /></MemoryRouter>)
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4)
+    // Los especialistas se cargan de forma asíncrona (en modo api vienen de ms-citas).
+    expect(await screen.findAllByRole('heading', { level: 2 })).toHaveLength(4)
 
     await userEvent.type(screen.getByLabelText('Buscar'), 'ninos')
 

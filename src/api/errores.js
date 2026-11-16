@@ -1,5 +1,5 @@
 // Errores de la API con una forma única, venga del backend, de la red o del modo local.
-// El backend responde los errores en JSON: { "mensaje": "...", "errores": { "campo": "detalle" } }.
+// El backend responde los errores en JSON: { "status": 400, "mensaje": "...", "campos": { "campo": "detalle" } }.
 
 const MENSAJES_POR_ESTADO = {
   400: 'Revisa los datos enviados.',
@@ -26,7 +26,7 @@ export function normalizarError(error) {
     const { status, data } = error.response
     const mensajeServidor = data?.mensaje ?? data?.message
     return new ErrorApi(status, mensajeServidor ?? MENSAJES_POR_ESTADO[status] ?? 'Ocurrió un error inesperado.', {
-      errores: data?.errores ?? {},
+      errores: data?.campos ?? data?.errores ?? {},
       delServidor: Boolean(mensajeServidor),
     })
   }

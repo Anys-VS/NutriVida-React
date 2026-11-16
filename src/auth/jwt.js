@@ -34,17 +34,27 @@ export function msHastaVencer(token, ahora = Date.now()) {
 
 export const estaVigente = (token, ahora = Date.now()) => msHastaVencer(token, ahora) > 0
 
-// Datos de sesión que usa la interfaz, tomados del token de acceso.
-// Contrato con el backend (ms-usuarios): sub = correo, run, nombre, apellidos, rol, exp.
+// ms-identidad envía el rol como nombre del enum (PACIENTE); la interfaz usa la etiqueta (Paciente).
+const ROL_DESDE_BACKEND = {
+  ADMINISTRADOR: 'Administrador',
+  RECEPCION: 'Recepción',
+  NUTRICIONISTA: 'Nutricionista',
+  PACIENTE: 'Paciente',
+}
+
+// Datos de sesión que usa la interfaz, tomados del token de acceso. Acepta los dos formatos:
+// - ms-identidad (modo api): sub = RUN, claim "correo", claim "nombre", rol = PACIENTE.
+// - simulación local:        sub = correo, claims "run" y "apellidos", rol = Paciente.
 export function sesionDesdeToken(token) {
   const claims = leerClaims(token)
   if (!claims?.sub || !claims?.rol) return null
+  const correo = claims.correo ?? claims.sub
   return {
-    run: claims.run,
-    correo: claims.sub,
+    run: claims.run ?? (claims.correo ? claims.sub : undefined),
+    correo,
     nombre: claims.nombre,
-    apellidos: claims.apellidos,
-    tipoUsuario: claims.rol,
+    apellidos: claims.apellidos ?? '',
+    tipoUsuario: ROL_DESDE_BACKEND[claims.rol] ?? claims.rol,
     expira: claims.exp * 1000,
   }
 }

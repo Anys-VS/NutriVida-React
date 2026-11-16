@@ -73,6 +73,27 @@ lleva al login y, al entrar, vuelve a la página pedida.
 (`RutaProtegida permiso="..."`), el menú del panel y el Navbar usan esa misma matriz. Sin sesión se va al
 login y se vuelve a la página pedida; con sesión pero sin permiso se muestra "No tienes permiso".
 
+### Estado de la integración (por etapas)
+
+Cada pantalla usa una capa de datos (`src/services/*`) que lee del backend en modo `api` o del navegador en
+modo `local`, y los adaptadores de `src/api/adaptadores.js` traducen las respuestas (por ejemplo `POR_CONFIRMAR`
+→ "Por confirmar"). Las pruebas `src/api/integracion.test.js` simulan las respuestas reales del backend.
+
+| Pantalla | Modo `api` (backend) | Endpoints |
+|---|---|---|
+| Login, registro, renovación y cierre de sesión | ✅ ms-identidad | `POST /api/v1/auth/login`, `/registro`, `/refresh`, `/logout` |
+| Servicios | ✅ ms-catalogo | `GET /api/v1/servicios` |
+| Especialistas | ✅ ms-citas | `GET /api/v1/nutricionistas` |
+| Mis citas: listar, confirmar y cancelar | ✅ ms-citas | `GET /api/v1/citas`, `PATCH /api/v1/citas/{id}/confirmar`, `/cancelar` |
+| Mis citas: mis compras | ✅ ms-ordenes | `GET /api/v1/ordenes` |
+| Mi progreso | ✅ ms-clinico | `GET /api/v1/fichas/mia` |
+| Reservar, reprogramar, carrito y pago, planes | 🔜 siguiente etapa (en modo `local`) | `GET /citas/disponibilidad`, `POST /citas`, `/carrito`… ya existen en el backend |
+| Panel interno (agenda, fichas, usuarios, reportes) | 🔜 siguiente etapa (en modo `local`) | `/citas`, `/fichas`, `/usuarios`… ya existen en el backend |
+
+**Probar con el backend:** levanta MySQL y los 6 servicios del backend (ver su README), crea `.env.local` con
+`VITE_MODO_DATOS=api` y ejecuta `npm run dev`. Vite reenvía `/api` al API Gateway (`http://localhost:8080`).
+Las cuentas de prueba son las mismas del backend (por ejemplo `paciente@gmail.com` / `paciente1`).
+
 ## Vistas de esta etapa
 
 **Tienda:** Inicio, Servicios (con filtro), Categorías, Ofertas, Detalle, Reservar, Checkout
@@ -128,7 +149,7 @@ para que se carguen las cuentas y fichas nuevas.
 ## Pruebas
 
 Vitest con jsdom y Testing Library. Mocks: `localStorage` en memoria y reloj controlado
-con `vi.useFakeTimers()`. 57 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
+con `vi.useFakeTimers()`. 67 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
 automática, reembolsos, planes, pagos, cupos críticos, reportes, usuarios, carrito, reprogramación,
 buscador, horarios reales, fichas clínicas, tokens JWT, cliente HTTP y permisos) y sobre los componentes (renderizado, props, estado y
 eventos, incluido el menú según el rol). La cobertura se mide solo sobre los archivos que decidimos
