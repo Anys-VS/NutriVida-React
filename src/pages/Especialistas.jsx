@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { citas } from '../data/db'
-import { nutricionistas } from '../data/nutricionistas'
+import { usaApi } from '../config/api'
 import { proximosHorarios } from '../domain/citas'
+import { useCarga } from '../hooks/useCarga'
+import { listarNutricionistas } from '../services/especialistas'
 import { buscarProfesionales, describirHorario, iniciales, NOMBRES_DIAS } from '../domain/profesionales'
 
 const formatoDia = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -26,12 +28,17 @@ function Especialistas() {
   }
   const limpiar = () => setParams({}, { replace: true })
 
+  // Modo 'api': GET /api/v1/nutricionistas en ms-citas. Modo 'local': catálogo del navegador.
+  const { datos, cargando, error, reintentar } = useCarga(listarNutricionistas)
+  const nutricionistas = useMemo(() => datos ?? [], [datos])
   const especialidades = [...new Set(nutricionistas.map((profesional) => profesional.especialidad))]
   const resultados = useMemo(
     () => buscarProfesionales(nutricionistas, { texto, especialidad, dia }),
-    [texto, especialidad, dia],
+    [nutricionistas, texto, especialidad, dia],
   )
-  const todasLasCitas = citas.listar()
+  // En modo api el paciente no ve las citas de otros: los próximos horarios se calculan según la jornada
+  // y la disponibilidad real se confirma al reservar (GET /citas/disponibilidad).
+  const todasLasCitas = usaApi() ? [] : citas.listar()
 
   return (
     <section className="seccion">
@@ -66,11 +73,18 @@ function Especialistas() {
           </div>
         </form>
 
-        <p className="texto-ayuda" aria-live="polite">
+        {cargando && <p className="texto-ayuda" role="status">Cargando especialistas…</p>}
+        {error && (
+          <div role="alert" className="alert alert-danger d-flex flex-wrap align-items-center gap-2">
+            <span>No pudimos cargar los especialistas: {error.message}</span>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={reintentar}>Reintentar</button>
+          </div>
+        )}
+        {!cargando && !error && <p className="texto-ayuda" aria-live="polite">
           {resultados.length === 1 ? '1 especialista encontrado' : `${resultados.length} especialistas encontrados`}
-        </p>
+        </p>}
 
-        {resultados.length === 0 ? (
+        {cargando || error ? null : resultados.length === 0 ? (
           <div className="tarjeta-formulario text-center">
             <h2 className="h4">No encontramos especialistas con esos filtros</h2>
             <button type="button" className="btn btn-nv-secundario mt-2" onClick={limpiar}>Limpiar filtros</button>

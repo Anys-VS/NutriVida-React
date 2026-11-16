@@ -10,9 +10,25 @@ import { servidorLocal } from './servidorLocal'
 // Respuesta esperada del backend: { "accessToken": "...", "refreshToken": "..." }
 const tokensDe = ({ data }) => ({ acceso: data.accessToken, renovacion: data.refreshToken })
 
+// ms-identidad espera estos campos; los vacíos van como null (una fecha "" no se puede leer).
+const datosRegistro = ({ run, nombre, apellidos, correo, contrasena, fechaNacimiento, region, comuna, direccion }) => {
+  const valor = (texto) => (texto && String(texto).trim() ? String(texto).trim() : null)
+  return {
+    run: valor(run)?.toUpperCase() ?? null,
+    nombre: valor(nombre),
+    apellidos: valor(apellidos),
+    correo: valor(correo)?.toLowerCase() ?? null,
+    contrasena,
+    fechaNacimiento: valor(fechaNacimiento),
+    region: valor(region),
+    comuna: valor(comuna),
+    direccion: valor(direccion),
+  }
+}
+
 const servidorApi = {
   login: (correo, contrasena) => cliente.post('/auth/login', { correo, contrasena }, { sinToken: true }).then(tokensDe),
-  registrar: (datos) => cliente.post('/auth/registro', datos, { sinToken: true }).then(tokensDe),
+  registrar: (datos) => cliente.post('/auth/registro', datosRegistro(datos), { sinToken: true }).then(tokensDe),
   renovar: (renovacion) => cliente.post('/auth/refresh', { refreshToken: renovacion }, { sinToken: true }).then(tokensDe),
   cerrar: (renovacion) => cliente.post('/auth/logout', { refreshToken: renovacion }, { sinToken: true }),
 }

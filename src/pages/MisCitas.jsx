@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import EstadoBadge from '../components/EstadoBadge'
 import PagoEnLinea from '../components/PagoEnLinea'
@@ -6,52 +6,54 @@ import { useSesion } from '../context/SesionContext'
 import { ESTADO_CITA, ESTADO_PLAN } from '../config/reglas'
 import { citaTienePagoPendiente, necesitaRecordatorio, puedeCancelarPaciente } from '../domain/citas'
 import { requiereReembolso } from '../domain/metricas'
-import { cancelarPlan, planesDePaciente, reembolsoPorCancelar } from '../services/planes'
-import { ordenesDePaciente } from '../services/carrito'
-import {
-  cancelarCita, cancelarCitasVencidas, citasDePaciente, confirmarAsistencia, pagarCita,
-} from '../services/reservas'
+import { cancelarPlan, reembolsoPorCancelar } from '../services/planes'
+import { pagarCita } from '../services/reservas'
+import { cancelarMiCita, cargarMisCitas, confirmarMiCita } from '../services/misCitas'
+import { useCarga } from '../hooks/useCarga'
+import { usaApi } from '../config/api'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 
 function MisCitas() {
   const { sesion } = useSesion()
   const ubicacion = useLocation()
-  const [lista, setLista] = useState(() => citasDePaciente(sesion.correo))
-  const [misPlanes, setMisPlanes] = useState(() => planesDePaciente(sesion.correo))
   const [mensaje, setMensaje] = useState(
     ubicacion.state?.mensaje ? { tipo: 'success', texto: ubicacion.state.mensaje } : null,
   )
   const [pagandoId, setPagandoId] = useState(null)
-  const misOrdenes = ordenesDePaciente(sesion.correo)
+  const [version, setVersion] = useState(0)
+  // En modo 'api' algunas acciones todavía no existen en el backend (pagar una cita sola, reprogramar
+  // desde aquí, planes y detalle de una orden): se ocultan y se mantienen en modo 'local'.
+  const modoApi = usaApi()
 
-  const refrescar = useCallback(() => {
-    setLista(citasDePaciente(sesion.correo))
-    setMisPlanes(planesDePaciente(sesion.correo))
-  }, [sesion.correo])
+  // Modo 'api': ms-citas (GET /api/v1/citas) y ms-ordenes (GET /api/v1/ordenes). Modo 'local': el navegador.
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarMisCitas(sesion.correo), [sesion.correo, version])
+  const lista = datos?.citas ?? []
+  const misPlanes = datos?.planes ?? []
+  const misOrdenes = datos?.ordenes ?? []
+  const refrescar = () => setVersion((versionAnterior) => versionAnterior + 1)
 
-  // RN-06: al entrar se cancelan las citas cuyo plazo de confirmación venció.
+  // RN-06 en modo local: al cargar se cancelan las citas cuyo plazo de confirmación venció.
   useEffect(() => {
-    const canceladas = cancelarCitasVencidas()
-    if (canceladas > 0) {
-      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${canceladas} cita(s) por falta de confirmación a tiempo.` })
+    if (datos?.canceladas > 0) {
+      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${datos.canceladas} cita(s) por falta de confirmación a tiempo.` })
     }
-    refrescar()
-  }, [refrescar])
+  }, [datos])
 
-  const resolver = (resultado, textoOk) => {
+  const resolver = async (accion, textoOk) => {
+    const resultado = await accion
     setMensaje(resultado.ok ? { tipo: 'success', texto: textoOk(resultado) } : { tipo: 'danger', texto: resultado.motivo })
     setPagandoId(null)
     refrescar()
   }
 
-  const confirmar = (id) => resolver(confirmarAsistencia(id), () => 'Asistencia confirmada. ¡Te esperamos!')
-  const pagado = (id) => resolver(pagarCita(id), () => 'Pago recibido. Tu cita quedó confirmada.')
+  const confirmar = (id) => resolver(confirmarMiCita(id), () => 'Asistencia confirmada. ¡Te esperamos!')
+  const pagado = (id) => resolver(Promise.resolve(pagarCita(id)), () => 'Pago recibido. Tu cita quedó confirmada.')
 
   const pendientes = lista.filter(citaTienePagoPendiente)
 
   const cancelar = (cita) => {
     if (!window.confirm('¿Quieres cancelar esta cita?')) return
-    resolver(cancelarCita(cita.id), ({ reembolsoPendiente }) => {
+    resolver(cancelarMiCita(cita.id), ({ reembolsoPendiente }) => {
       if (cita.planId) return 'Sesión cancelada. Vuelve al saldo de tu plan para que la reagendes.'
       return reembolsoPendiente > 0
         ? `Cita cancelada. Tu reembolso de ${formatearPrecioCLP(reembolsoPendiente)} quedó pendiente: la clínica lo registrará.`
@@ -65,7 +67,7 @@ function MisCitas() {
       ? `Se te devolverá el 80% del plan: ${formatearPrecioCLP(reembolso)}.`
       : 'No habrá reembolso porque ya tuviste al menos una sesión atendida.'
     if (!window.confirm(`¿Cancelar el plan? ${detalle} Las sesiones agendadas se cancelarán.`)) return
-    resolver(cancelarPlan(plan.id), ({ reembolsoPendiente }) =>
+    resolver(Promise.resolve(cancelarPlan(plan.id)), ({ reembolsoPendiente }) =>
       reembolsoPendiente > 0
         ? `Plan cancelado. Tu reembolso de ${formatearPrecioCLP(reembolsoPendiente)} quedó pendiente: la clínica lo registrará.`
         : 'Plan cancelado. No corresponde reembolso.')
@@ -77,6 +79,15 @@ function MisCitas() {
         <h1 className="titulo-seccion">Mis citas</h1>
         <p className="intro-seccion">Confirma tu asistencia, paga o cancela tus citas y planes desde aquí.</p>
         {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
+        {cargando && <p className="texto-ayuda" role="status">Cargando tus citas…</p>}
+        {error && (
+          <div role="alert" className="alert alert-danger d-flex flex-wrap align-items-center gap-2">
+            <span>No pudimos cargar tus citas: {error.message}</span>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={reintentar}>Reintentar</button>
+          </div>
+        )}
+        {!cargando && !error && (
+        <>
 
         {misPlanes.length > 0 && (
           <section aria-labelledby="titulo-planes" className="mb-5">
@@ -130,7 +141,7 @@ function MisCitas() {
 
         <h2 className="h3 mb-3">Mis citas y sesiones</h2>
         {/* Las citas con pago pendiente también aparecen en el carrito, el único lugar para pagar varias juntas. */}
-        {pendientes.length > 0 && (
+        {!modoApi && pendientes.length > 0 && (
           <div className="tarjeta-formulario mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <p className="mb-0">
               Tienes {pendientes.length} cita(s) con pago pendiente
@@ -192,12 +203,12 @@ function MisCitas() {
                           Confirmar asistencia
                         </button>
                       )}
-                      {citaTienePagoPendiente(cita) && (
+                      {!modoApi && citaTienePagoPendiente(cita) && (
                         <button type="button" className="btn btn-nv-secundario btn-sm" onClick={() => setPagandoId(cita.id)}>
                           Pagar ahora
                         </button>
                       )}
-                      {puedeCancelar && (
+                      {!modoApi && puedeCancelar && (
                         <Link to={`/reservar?reprogramar=${cita.id}`} className="btn btn-outline-secondary btn-sm">Reprogramar</Link>
                       )}
                       {puedeCancelar && (
@@ -233,13 +244,15 @@ function MisCitas() {
                       <td>{formatearFechaHora(orden.fecha)}</td>
                       <td>{orden.detalle.length}</td>
                       <td className="text-end">{formatearPrecioCLP(orden.total)}</td>
-                      <td><Link to={`/orden/${orden.id}`}>Ver detalle</Link></td>
+                      <td>{!modoApi && <Link to={`/orden/${orden.id}`}>Ver detalle</Link>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </section>
+        )}
+        </>
         )}
       </div>
     </section>

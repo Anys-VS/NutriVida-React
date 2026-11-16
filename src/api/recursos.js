@@ -19,22 +19,22 @@ function crud(ruta) {
 export const serviciosApi = crud('/servicios')
 export const categoriasApi = crud('/categorias')
 
-// ms-catalogo (profesionales y buscador de especialistas)
-export const profesionalesApi = {
-  ...crud('/profesionales'),
-  buscar: ({ texto, especialidad, dia } = {}) =>
-    cliente.get('/profesionales', { params: { q: texto || undefined, especialidad: especialidad || undefined, dia: dia ?? undefined } }).then(datos),
-  horariosLibres: (id, fecha) => cliente.get(`/profesionales/${id}/horarios`, { params: { fecha } }).then(datos),
+// ms-citas: nutricionistas con su jornada (el buscador filtra en el navegador) y disponibilidad de un día.
+export const nutricionistasApi = {
+  listar: () => cliente.get('/nutricionistas').then(datos),
+  obtener: (id) => cliente.get(`/nutricionistas/${id}`).then(datos),
+  disponibilidad: ({ fecha, nutricionista, codigoServicio }) =>
+    cliente.get('/citas/disponibilidad', { params: { fecha, nutricionista: nutricionista || undefined, codigoServicio: codigoServicio || undefined } }).then(datos),
 }
 
-// ms-agenda (citas, planes, carrito y órdenes)
+// ms-citas. GET /citas ya devuelve solo lo que corresponde al rol (paciente: sus citas).
 export const citasApi = {
   ...crud('/citas'),
-  mias: () => cliente.get('/citas/mias').then(datos),
+  mias: () => cliente.get('/citas').then(datos),
   confirmar: (id) => cliente.patch(`/citas/${id}/confirmar`).then(datos),
   cancelar: (id) => cliente.patch(`/citas/${id}/cancelar`).then(datos),
   reprogramar: (id, cambios) => cliente.patch(`/citas/${id}/reprogramar`, cambios).then(datos),
-  registrarAsistencia: (id, estado) => cliente.patch(`/citas/${id}/asistencia`, { estado }).then(datos),
+  registrarAsistencia: (id, estado) => cliente.patch(`/citas/${id}/asistencia`, { estado }).then(datos), // ATENDIDA | INASISTENCIA
 }
 export const planesApi = crud('/planes')
 // El carrito devuelve { items: [...por reservar], citasPorPagar: [...agendadas con pago pendiente] }.
@@ -48,10 +48,12 @@ export const carritoApi = {
   // Una sola orden con ítems nuevos y citas ya agendadas; todo o nada.
   pagar: ({ ids, citaIds, correoConfirmacion }) => cliente.post('/ordenes', { items: ids, citas: citaIds, correoConfirmacion }).then(datos),
 }
-export const ordenesApi = { mias: () => cliente.get('/ordenes/mias').then(datos), obtener: (id) => cliente.get(`/ordenes/${id}`).then(datos) }
+// ms-ordenes. GET /ordenes devuelve las del paciente (o todas para el personal).
+export const ordenesApi = { mias: () => cliente.get('/ordenes').then(datos), obtener: (id) => cliente.get(`/ordenes/${id}`).then(datos) }
 
 // ms-clinico (fichas: solo el paciente y su nutricionista)
 export const fichasApi = {
+  mia: () => cliente.get('/fichas/mia').then(datos),
   obtener: (correoPaciente) => cliente.get(`/fichas/${encodeURIComponent(correoPaciente)}`).then(datos),
   actualizar: (correoPaciente, cambios) => cliente.put(`/fichas/${encodeURIComponent(correoPaciente)}`, cambios).then(datos),
   registrarMedicion: (correoPaciente, medicion) =>
