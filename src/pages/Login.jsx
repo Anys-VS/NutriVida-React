@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import FormularioLogin from '../components/FormularioLogin'
 import { useSesion } from '../context/SesionContext'
@@ -17,18 +17,29 @@ function Login() {
   const [errorAuth, setErrorAuth] = useState('')
   const desde = params.get('desde')
 
-  // Quien ya tiene sesión no necesita el formulario.
-  if (sesion) return <Navigate to={destinoSeguro(desde) ?? rutaInicialPorRol(sesion.tipoUsuario)} replace />
+  if (sesion) {
+    return (
+      <Navigate
+        to={destinoSeguro(desde) ?? rutaInicialPorRol(sesion.tipoUsuario)}
+        replace
+      />
+    )
+  }
 
-  // El login pide los tokens (al backend o a la simulación local) y la sesión se arma desde el token.
   const entrar = async ({ correo, contrasena }) => {
     setErrorAuth('')
+
     const resultado = await iniciarSesion(correo, contrasena)
+
     if (!resultado.ok) {
       setErrorAuth(resultado.motivo)
       return
     }
-    navigate(destinoSeguro(desde) ?? rutaInicialPorRol(resultado.sesion.tipoUsuario), { replace: true })
+
+    navigate(
+      destinoSeguro(desde) ?? rutaInicialPorRol(resultado.sesion.tipoUsuario),
+      { replace: true }
+    )
   }
 
   return (
@@ -40,15 +51,23 @@ function Login() {
             <p className="text-center intro-seccion mx-auto">
               Accede para revisar tus citas, tu historial y tu plan alimenticio.
             </p>
-            {aviso && <div role="status" className="alert alert-warning">{aviso}</div>}
-            <FormularioLogin onSubmit={entrar} errorExterno={errorAuth} />
+
+            {aviso && (
+              <div role="status" className="alert alert-warning">
+                {aviso}
+              </div>
+            )}
+
+            <FormularioLogin
+              onSubmit={entrar}
+              errorExterno={errorAuth}
+            />
+
             <p className="text-center mt-3 mb-0">
               ¿Aún no tienes cuenta?{' '}
-              <Link to={desde ? `/registro?desde=${encodeURIComponent(desde)}` : '/registro'}>Regístrate aquí</Link>
-            </p>
-            <p className="texto-ayuda text-center mt-2 mb-0">
-              Cuentas de demostración: admin@gmail.com · admin123 · paciente@gmail.com · paciente1 ·
-              carolina.fuentes@nutrivida.cl · nutri123
+              <Link to={desde ? `/registro?desde=${encodeURIComponent(desde)}` : '/registro'}>
+                Regístrate aquí
+              </Link>
             </p>
           </div>
         </div>
