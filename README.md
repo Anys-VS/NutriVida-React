@@ -154,3 +154,8 @@ automática, reembolsos, planes, pagos, cupos críticos, reportes, usuarios, car
 buscador, horarios reales, fichas clínicas, tokens JWT, cliente HTTP y permisos) y sobre los componentes (renderizado, props, estado y
 eventos, incluido el menú según el rol). La cobertura se mide solo sobre los archivos que decidimos
 probar (ver `vite.config.js`).
+
+## Despliegue (Docker)
+
+El `Dockerfile` compila la app en modo `api` y la sirve con nginx (`nginx/default.conf`), que además reenvía `/api` y Swagger al API Gateway.
+Se levanta junto al backend con el `docker-compose.yml` del repositorio NutriVida-Backend (ver su `DESPLIEGUE.md`).
