@@ -86,7 +86,7 @@ function AppRoutes() {
         <Route path="citas" element={protegida('citas:gestionar', <AdminCitas />)} />
         <Route path="agenda" element={protegida('agenda:propia', <Agenda />)} />
         <Route path="pacientes" element={protegida('fichas:gestionar', <Pacientes />)} />
-        <Route path="pacientes/:run" element={protegida('fichas:gestionar', <FichaPaciente />)} />
+        <Route path="pacientes/:correo" element={protegida('fichas:gestionar', <FichaPaciente />)} />
         <Route path="servicios" element={protegida('catalogo:gestionar', <AdminServicios />)} />
         <Route path="categorias" element={protegida('catalogo:gestionar', <AdminCategorias />)} />
         <Route path="criticos" element={protegida('catalogo:gestionar', <Criticos />)} />

@@ -1,32 +1,27 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Campo from '../../components/Campo'
+import EstadoCarga from '../../components/EstadoCarga'
 import ProgresoPaciente from '../../components/ProgresoPaciente'
 import { useSesion } from '../../context/SesionContext'
-import { usuarios } from '../../data/db'
 import { calcularIMC, clasificarIMC } from '../../domain/clinico'
-import { guardarDatosFicha, obtenerFicha, registrarMedicion } from '../../services/clinico'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarFicha, guardarDatosFicha, registrarMedicion } from '../../services/panel'
 import { fechaLocalISO } from '../../utils/formato'
 
 const MEDICION_VACIA = { fecha: fechaLocalISO(), peso: '', talla: '', cintura: '', nota: '' }
 
-// Ficha clínica de un paciente. Solo la abre el nutricionista asignado o que lo atiende.
+// Ficha clínica de un paciente (ms-clinico en modo 'api'). Solo la abre el nutricionista asignado o que lo atiende.
+// La ruta lleva el correo del paciente: es lo que identifica la ficha en ambos modos.
 function FichaPaciente() {
-  const { run } = useParams()
+  const { correo } = useParams()
   const { sesion } = useSesion()
-  const paciente = usuarios.obtener(run)
   const [version, setVersion] = useState(0)
-  const resultado = paciente ? obtenerFicha(paciente.correo, sesion) : { ok: false, motivo: 'El paciente no existe.' }
-  const ficha = resultado.ok ? resultado.ficha : null
+  const [aviso, setAviso] = useState(null) // mensaje de lo último que se guardó
+  const { datos: resultado, cargando, error, reintentar } = useCarga(() => cargarFicha(correo, sesion), [correo, version])
 
-  const ultimaTalla = ficha?.mediciones.at(-1)?.talla ?? ''
-  const [medicion, setMedicion] = useState({ ...MEDICION_VACIA, talla: ultimaTalla })
-  const [erroresMedicion, setErroresMedicion] = useState({})
-  const [datos, setDatos] = useState({
-    objetivo: ficha?.objetivo ?? '', antecedentes: ficha?.antecedentes ?? '', planTexto: ficha?.planAlimenticio?.texto ?? '',
-  })
-  const [mensaje, setMensaje] = useState(null)
-
+  // Después de guardar se vuelve a cargar la ficha, para mostrar lo que quedó en el servidor.
+  if (cargando || !resultado) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="la ficha" />
   if (!resultado.ok) {
     return (
       <>
@@ -35,41 +30,57 @@ function FichaPaciente() {
       </>
     )
   }
+  return <FormularioFicha key={version} correo={correo} resultado={resultado} sesion={sesion} aviso={aviso}
+    alGuardar={(texto) => { setAviso(texto); setVersion((versionAnterior) => versionAnterior + 1) }} />
+}
+
+function FormularioFicha({ correo, resultado, sesion, aviso, alGuardar }) {
+  const { ficha, paciente } = resultado
+
+  const ultimaTalla = ficha?.mediciones.at(-1)?.talla ?? ''
+  const [medicion, setMedicion] = useState({ ...MEDICION_VACIA, talla: ultimaTalla })
+  const [erroresMedicion, setErroresMedicion] = useState({})
+  const [datos, setDatos] = useState({
+    objetivo: ficha?.objetivo ?? '', antecedentes: ficha?.antecedentes ?? '', planTexto: ficha?.planAlimenticio?.texto ?? '',
+  })
+  const [mensaje, setMensaje] = useState(aviso ? { tipo: 'success', texto: aviso } : null)
+  const [guardando, setGuardando] = useState(false)
 
   const cambiarMedicion = (campo) => (evento) => setMedicion((medicionAnterior) => ({ ...medicionAnterior, [campo]: evento.target.value }))
   const cambiarDatos = (campo) => (evento) => setDatos((datosAnteriores) => ({ ...datosAnteriores, [campo]: evento.target.value }))
   const imcPrevio = calcularIMC(medicion.peso, medicion.talla)
 
-  const guardarMedicion = (evento) => {
-    evento.preventDefault()
-    const resultado = registrarMedicion(paciente.correo, medicion, sesion)
-    setErroresMedicion(resultado.errores ?? {})
-    setMensaje(resultado.ok ? { tipo: 'success', texto: 'Medición registrada. El paciente ya la ve en "Mi progreso".' } : { tipo: 'danger', texto: resultado.motivo })
-    if (resultado.ok) {
-      setMedicion({ ...MEDICION_VACIA, talla: medicion.talla })
-      setVersion((versionAnterior) => versionAnterior + 1)
-    }
+  const terminar = (respuesta, textoOk) => {
+    setGuardando(false)
+    setErroresMedicion(respuesta.errores ?? {})
+    if (!respuesta.ok) return setMensaje({ tipo: 'danger', texto: respuesta.motivo })
+    return alGuardar(textoOk)
   }
 
-  const guardarDatos = (evento) => {
+  const guardarMedicion = async (evento) => {
     evento.preventDefault()
-    const resultado = guardarDatosFicha(paciente.correo, datos, sesion)
-    setMensaje(resultado.ok ? { tipo: 'success', texto: 'Ficha y plan alimenticio guardados.' } : { tipo: 'danger', texto: resultado.motivo })
-    if (resultado.ok) setVersion((versionAnterior) => versionAnterior + 1)
+    setGuardando(true)
+    terminar(await registrarMedicion(correo, medicion, sesion, resultado.nueva), 'Medición registrada. El paciente ya la ve en "Mi progreso".')
+  }
+
+  const guardarDatos = async (evento) => {
+    evento.preventDefault()
+    setGuardando(true)
+    terminar(await guardarDatosFicha(correo, datos, sesion, resultado.nueva), 'Ficha y plan alimenticio guardados.')
   }
 
   return (
-    <div key={version}>
+    <div>
       <nav aria-label="breadcrumb" className="mb-2">
         <ol className="breadcrumb">
           <li className="breadcrumb-item"><Link to="/admin/pacientes">Mis pacientes</Link></li>
           <li className="breadcrumb-item active" aria-current="page">Ficha</li>
         </ol>
       </nav>
-      <h1 className="titulo-seccion">{paciente.nombre} {paciente.apellidos}</h1>
+      <h1 className="titulo-seccion">{paciente ? `${paciente.nombre} ${paciente.apellidos}` : correo}</h1>
       <p className="intro-seccion">
-        RUN {paciente.run} · {paciente.correo}
-        {paciente.fechaNacimiento && <> · nacimiento {new Date(`${paciente.fechaNacimiento}T00:00:00`).toLocaleDateString('es-CL')}</>}
+        {paciente ? `RUN ${paciente.run} · ${paciente.correo}` : 'Ficha clínica'}
+        {paciente?.fechaNacimiento && <> · nacimiento {new Date(`${paciente.fechaNacimiento}T00:00:00`).toLocaleDateString('es-CL')}</>}
         {ficha.nutricionista && <> · a cargo de {ficha.nutricionista}</>}
       </p>
       {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
@@ -97,7 +108,7 @@ function FichaPaciente() {
               {imcPrevio && <p className="texto-ayuda">IMC calculado: {imcPrevio} ({clasificarIMC(imcPrevio)})</p>}
               <Campo id="med-nota" etiqueta="Nota del control" as="textarea" rows={2} maxLength={300}
                 value={medicion.nota} onChange={cambiarMedicion('nota')} />
-              <button type="submit" className="btn btn-nv-primario w-100">Registrar medición</button>
+              <button type="submit" className="btn btn-nv-primario w-100" disabled={guardando}>Registrar medición</button>
             </form>
           </div>
           <div className="col-xl-7">
@@ -109,7 +120,7 @@ function FichaPaciente() {
                 value={datos.antecedentes} onChange={cambiarDatos('antecedentes')} />
               <Campo id="ficha-plan" etiqueta="Plan alimenticio (lo ve el paciente)" as="textarea" rows={7} maxLength={2000}
                 value={datos.planTexto} onChange={cambiarDatos('planTexto')} />
-              <button type="submit" className="btn btn-nv-primario w-100">Guardar ficha</button>
+              <button type="submit" className="btn btn-nv-primario w-100" disabled={guardando}>Guardar ficha</button>
             </form>
           </div>
         </div>

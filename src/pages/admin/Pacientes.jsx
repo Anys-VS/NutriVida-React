@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import EstadoCarga from '../../components/EstadoCarga'
 import { useSesion } from '../../context/SesionContext'
-import { pacientesDe } from '../../services/clinico'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarPacientes } from '../../services/panel'
 import { normalizar } from '../../domain/profesionales'
 import { formatearFechaHora } from '../../utils/formato'
 
@@ -9,7 +11,8 @@ import { formatearFechaHora } from '../../utils/formato'
 function Pacientes() {
   const { sesion } = useSesion()
   const [busqueda, setBusqueda] = useState('')
-  const lista = pacientesDe(sesion)
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarPacientes(sesion))
+  const lista = datos ?? []
   const visibles = lista.filter((paciente) => normalizar(`${paciente.nombre} ${paciente.correo}`).includes(normalizar(busqueda)))
 
   return (
@@ -21,7 +24,8 @@ function Pacientes() {
         <input id="buscar-paciente" type="search" className="form-control" value={busqueda}
           onChange={(evento) => setBusqueda(evento.target.value)} placeholder="Nombre o correo" />
       </div>
-      {visibles.length === 0 ? (
+      <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="tus pacientes" />
+      {!datos ? null : visibles.length === 0 ? (
         <p className="tarjeta-formulario">No hay pacientes que coincidan.</p>
       ) : (
         <div className="table-responsive">
@@ -34,7 +38,7 @@ function Pacientes() {
                   <td>{paciente.nombre}</td>
                   <td>{paciente.correo}</td>
                   <td>{paciente.proxima ? formatearFechaHora(paciente.proxima.fechaHora) : '—'}</td>
-                  <td>{paciente.run && <Link className="btn btn-sm btn-nv-primario" to={`/admin/pacientes/${paciente.run}`}>Ver ficha</Link>}</td>
+                  <td><Link className="btn btn-sm btn-nv-primario" to={`/admin/pacientes/${encodeURIComponent(paciente.correo)}`}>Ver ficha</Link></td>
                 </tr>
               ))}
             </tbody>

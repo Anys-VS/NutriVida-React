@@ -64,6 +64,8 @@ export const ordenesApi = { mias: () => cliente.get('/ordenes').then(datos), obt
 // ms-clinico (fichas: solo el paciente y su nutricionista)
 export const fichasApi = {
   mia: () => cliente.get('/fichas/mia').then(datos),
+  listar: () => cliente.get('/fichas').then(datos), // pacientes del nutricionista de la sesión
+  crear: ({ pacienteCorreo, objetivo, antecedentes }) => cliente.post('/fichas', { pacienteCorreo, objetivo, antecedentes }).then(datos),
   obtener: (correoPaciente) => cliente.get(`/fichas/${encodeURIComponent(correoPaciente)}`).then(datos),
   actualizar: (correoPaciente, cambios) => cliente.put(`/fichas/${encodeURIComponent(correoPaciente)}`, cambios).then(datos),
   registrarMedicion: (correoPaciente, medicion) =>

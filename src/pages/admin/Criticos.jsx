@@ -1,11 +1,15 @@
-import { useMemo } from 'react'
-import { citas, servicios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
 import { REGLAS } from '../../config/reglas'
 import { talleresCriticos } from '../../domain/criticos'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarDatosAdministracion } from '../../services/panel'
 import { formatearFechaHora } from '../../utils/formato'
 
+// Talleres próximos con pocos cupos, calculados con las citas de ms-citas y los cupos de ms-catalogo.
 function Criticos() {
-  const lista = useMemo(() => talleresCriticos({ citas: citas.listar(), servicios: servicios.listar() }), [])
+  const { datos, cargando, error, reintentar } = useCarga(cargarDatosAdministracion)
+  if (!datos) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="los cupos" />
+  const lista = talleresCriticos({ citas: datos.citas, servicios: datos.servicios })
 
   return (
     <>

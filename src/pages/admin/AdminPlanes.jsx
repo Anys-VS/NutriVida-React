@@ -1,20 +1,21 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import EstadoBadge from '../../components/EstadoBadge'
-import { citas, planes, usuarios } from '../../data/db'
-import { registrarReembolsoPlan } from '../../services/planes'
-import { resumenSesiones } from '../../domain/planes'
+import EstadoCarga from '../../components/EstadoCarga'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarPlanes, reembolsarPlan } from '../../services/administracion'
 import { formatearFechaHora, formatearPrecioCLP } from '../../utils/formato'
 
+// Planes contratados por los pacientes (ms-citas en modo 'api').
 function AdminPlanes() {
-  const [lista, setLista] = useState(() => planes.listar())
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(cargarPlanes, [version])
+  const lista = datos?.planes ?? []
+  const nombres = datos?.nombres ?? {}
   const [mensaje, setMensaje] = useState(null)
-  const refrescar = useCallback(() => setLista(planes.listar()), [])
+  const refrescar = () => setVersion((versionAnterior) => versionAnterior + 1)
 
-  const nombres = Object.fromEntries(usuarios.listar().map((usuario) => [usuario.correo.toLowerCase(), `${usuario.nombre} ${usuario.apellidos}`]))
-  const todasLasCitas = citas.listar()
-
-  const reembolsar = (id) => {
-    const resultado = registrarReembolsoPlan(id)
+  const reembolsar = async (id) => {
+    const resultado = await reembolsarPlan(id)
     setMensaje(resultado.ok
       ? { tipo: 'success', texto: `Reembolso de ${formatearPrecioCLP(resultado.reembolso)} registrado.` }
       : { tipo: 'danger', texto: resultado.motivo })
@@ -26,6 +27,7 @@ function AdminPlanes() {
       <h1 className="titulo-seccion">Planes contratados</h1>
       <p className="intro-seccion">Seguimiento de los planes de los pacientes y registro de sus reembolsos.</p>
       {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
+      <EstadoCarga cargando={cargando && !datos} error={error} reintentar={reintentar} que="los planes" />
       <div className="table-responsive">
         <table className="table tabla-admin align-middle">
           <caption className="visually-hidden">Planes contratados</caption>
@@ -33,7 +35,7 @@ function AdminPlanes() {
           <tbody>
             {lista.length === 0 && <tr><td colSpan={6} className="text-center">Aún no hay planes contratados.</td></tr>}
             {lista.map((plan) => {
-              const resumen = resumenSesiones(plan, todasLasCitas.filter((cita) => cita.planId === plan.id))
+              const { resumen } = plan
               return (
                 <tr key={plan.id}>
                   <td>{nombres[plan.pacienteCorreo.toLowerCase()] ?? plan.pacienteCorreo}</td>

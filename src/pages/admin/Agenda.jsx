@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import EstadoBadge from '../../components/EstadoBadge'
+import EstadoCarga from '../../components/EstadoCarga'
 import { useSesion } from '../../context/SesionContext'
-import { usuarios } from '../../data/db'
 import { ESTADO_CITA } from '../../config/reglas'
-import { agendaDe, profesionalDeSesion } from '../../services/clinico'
-import { marcarAtendida, marcarInasistencia } from '../../services/reservas'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarAgenda, nombreDe, registrarAsistencia } from '../../services/panel'
 import { describirHorario } from '../../domain/profesionales'
 import { fechaLocalISO, formatearFechaHora } from '../../utils/formato'
 
@@ -14,12 +14,13 @@ const FILTROS = { HOY: 'Hoy', PROXIMAS: 'Próximas', PASADAS: 'Pasadas', TODAS: 
 // Agenda del nutricionista: solo ve sus propias citas (caso NutriVida, rol Nutricionista).
 function Agenda() {
   const { sesion } = useSesion()
-  const profesional = profesionalDeSesion(sesion)
-  const [lista, setLista] = useState(() => agendaDe(sesion))
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarAgenda(sesion), [version])
+  const profesional = datos?.profesional ?? null
+  const lista = datos?.citas ?? []
+  const usuariosIndice = datos?.usuarios ?? {}
   const [filtro, setFiltro] = useState(FILTROS.PROXIMAS)
   const [mensaje, setMensaje] = useState(null)
-
-  const usuariosPorCorreo = Object.fromEntries(usuarios.listar().map((usuario) => [usuario.correo.toLowerCase(), usuario]))
   const hoy = fechaLocalISO()
   const ahora = new Date()
 
@@ -31,11 +32,13 @@ function Agenda() {
     return true
   })
 
-  const ejecutar = (resultado, texto) => {
+  const ejecutar = async (accion, texto) => {
+    const resultado = await accion
     setMensaje(resultado.ok ? { tipo: 'success', texto } : { tipo: 'danger', texto: resultado.motivo })
-    setLista(agendaDe(sesion))
+    setVersion((versionAnterior) => versionAnterior + 1)
   }
 
+  if (!datos) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="tu agenda" />
   if (!profesional) {
     return <div role="alert" className="alert alert-warning">Tu cuenta no está enlazada a un profesional del directorio.</div>
   }
@@ -62,22 +65,21 @@ function Agenda() {
             <thead><tr><th>Fecha y hora</th><th>Paciente</th><th>Servicio y motivo</th><th>Estado</th><th>Acciones</th></tr></thead>
             <tbody>
               {visibles.map((cita) => {
-                const paciente = usuariosPorCorreo[cita.pacienteCorreo.toLowerCase()]
                 return (
                   <tr key={cita.id}>
                     <td>{formatearFechaHora(cita.fechaHora)}</td>
-                    <td>{paciente ? `${paciente.nombre} ${paciente.apellidos}` : cita.pacienteCorreo}</td>
+                    <td>{nombreDe(usuariosIndice, cita.pacienteCorreo)}</td>
                     <td>{cita.nombreServicio}{cita.motivo && <><br /><small className="texto-ayuda">{cita.motivo}</small></>}</td>
                     <td><EstadoBadge estado={cita.estadoCita} /></td>
                     <td>
                       <div className="d-flex flex-wrap gap-2">
-                        {paciente && <Link className="btn btn-sm btn-outline-secondary" to={`/admin/pacientes/${paciente.run}`}>Ficha</Link>}
+                        <Link className="btn btn-sm btn-outline-secondary" to={`/admin/pacientes/${encodeURIComponent(cita.pacienteCorreo)}`}>Ficha</Link>
                         {cita.estadoCita === ESTADO_CITA.CONFIRMADA && (
                           <>
                             <button type="button" className="btn btn-sm btn-nv-primario"
-                              onClick={() => ejecutar(marcarAtendida(cita.id), 'Cita marcada como atendida.')}>Atendida</button>
+                              onClick={() => ejecutar(registrarAsistencia(cita.id, true), 'Cita marcada como atendida.')}>Atendida</button>
                             <button type="button" className="btn btn-sm btn-outline-danger"
-                              onClick={() => ejecutar(marcarInasistencia(cita.id), 'Inasistencia registrada.')}>Inasistencia</button>
+                              onClick={() => ejecutar(registrarAsistencia(cita.id, false), 'Inasistencia registrada.')}>Inasistencia</button>
                           </>
                         )}
                       </div>
