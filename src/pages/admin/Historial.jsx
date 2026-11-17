@@ -1,20 +1,20 @@
 import { Link, useParams } from 'react-router-dom'
 import EstadoBadge from '../../components/EstadoBadge'
-import { usuarios } from '../../data/db'
-import { citasDePaciente } from '../../services/reservas'
-import { planesDePaciente } from '../../services/planes'
+import EstadoCarga from '../../components/EstadoCarga'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarHistorial } from '../../services/administracion'
 import { formatearFechaHora, formatearPrecioCLP } from '../../utils/formato'
 
 function Historial() {
   const { run } = useParams()
-  const usuario = usuarios.obtener(run)
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarHistorial(run), [run])
 
-  if (!usuario) {
+  if (cargando || error) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="el historial" />
+  if (!datos) {
     return <p className="mensaje-detalle-error">No encontramos ese usuario. <Link to="/admin/usuarios">Volver a Usuarios</Link>.</p>
   }
 
-  const citas = citasDePaciente(usuario.correo)
-  const planes = planesDePaciente(usuario.correo)
+  const { usuario, citas, planes } = datos
 
   return (
     <>

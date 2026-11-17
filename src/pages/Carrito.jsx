@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Campo from '../components/Campo'
 import EditarHorario from '../components/EditarHorario'
@@ -9,7 +9,10 @@ import { REGLAS, TIPO_SERVICIO } from '../config/reglas'
 import { totalDe } from '../domain/carrito'
 import { horasHastaCita, puedeCancelarPaciente } from '../domain/citas'
 import { validarCorreoReserva } from '../domain/validaciones'
-import { editarItemCarrito, pagarCarrito, quitarDelCarrito, revisarAntesDePagar, vaciarCarrito } from '../services/carrito'
+import { useCarga } from '../hooks/useCarga'
+import { listarServicios } from '../services/catalogo'
+import { listarNutricionistas } from '../services/especialistas'
+import { editarItem, pagar, quitarItem, revisarPago, vaciar as vaciarCarrito } from '../services/miCarrito'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 
 // Líneas de detalle de un ítem; un plan sin sesión agendada no muestra nutricionista.
@@ -32,6 +35,11 @@ function Carrito() {
   const { items, pendientes, refrescar } = useCarrito()
   const navigate = useNavigate()
   const [marcados, setMarcados] = useState(() => new Set([...items, ...pendientes].map((elemento) => elemento.id)))
+  const [vistos, setVistos] = useState(() => new Set([...items, ...pendientes].map((elemento) => elemento.id)))
+  const [procesando, setProcesando] = useState(false)
+  // Servicios y nutricionistas para editar horarios (ms-catalogo y ms-citas en modo 'api').
+  const { datos: catalogo } = useCarga(() => Promise.all([listarServicios(), listarNutricionistas()]))
+  const [servicios, nutricionistas] = catalogo ?? [[], []]
   const [pagando, setPagando] = useState(null) // null | 'seleccionados' | 'todo'
   const [editando, setEditando] = useState(null) // id del ítem cuyo horario se edita
   const [correo, setCorreo] = useState(sesion.correo)
@@ -40,6 +48,14 @@ function Carrito() {
   const [problemas, setProblemas] = useState({})
 
   const todos = useMemo(() => [...items, ...pendientes], [items, pendientes])
+
+  // En modo 'api' el carrito llega después de cargar la página: lo nuevo que aparece queda marcado.
+  useEffect(() => {
+    const nuevos = todos.map((elemento) => elemento.id).filter((id) => !vistos.has(id))
+    if (nuevos.length === 0) return
+    setVistos((actual) => new Set([...actual, ...nuevos]))
+    setMarcados((actual) => new Set([...actual, ...nuevos]))
+  }, [todos, vistos])
   // Solo cuentan los marcados que siguen en el carrito.
   const seleccion = useMemo(() => ({
     items: items.filter((item) => marcados.has(item.id)),
@@ -65,23 +81,27 @@ function Carrito() {
     setMarcados(new Set(marcar ? todos.map((elemento) => elemento.id) : []))
   }
 
-  const quitar = (item) => {
-    quitarDelCarrito(sesion.correo, item.id)
+  const quitar = async (item) => {
+    const resultado = await quitarItem(sesion.correo, item.id)
     refrescar()
     setPagando(null)
-    setMensaje({ tipo: 'info', texto: `Quitaste "${item.nombreServicio}" del carrito.` })
+    setMensaje(resultado.ok
+      ? { tipo: 'info', texto: `Quitaste "${item.nombreServicio}" del carrito.` }
+      : { tipo: 'danger', texto: resultado.motivo })
   }
 
-  const vaciar = () => {
+  const vaciar = async () => {
     if (!window.confirm('¿Quitar del carrito todos los ítems por reservar? Tus citas ya agendadas no se tocan.')) return
-    vaciarCarrito(sesion.correo)
+    const resultado = await vaciarCarrito(sesion.correo)
     refrescar()
     setPagando(null)
-    setMensaje({ tipo: 'info', texto: 'Quitaste los ítems por reservar. Tus citas agendadas siguen igual.' })
+    setMensaje(resultado.ok
+      ? { tipo: 'info', texto: 'Quitaste los ítems por reservar. Tus citas agendadas siguen igual.' }
+      : { tipo: 'danger', texto: resultado.motivo })
   }
 
-  const guardarHorario = (item, cambios) => {
-    const resultado = editarItemCarrito({ pacienteCorreo: sesion.correo, id: item.id, ...cambios })
+  const guardarHorario = async (item, cambios) => {
+    const resultado = await editarItem({ correo: sesion.correo, id: item.id, ...cambios })
     if (resultado.ok) {
       refrescar()
       setEditando(null)
@@ -94,13 +114,13 @@ function Carrito() {
   }
 
   // Antes de pedir la tarjeta se revisa que todo siga disponible (RN-08, RN-14) y que las citas sigan pendientes.
-  const iniciarPago = (modo) => {
+  const iniciarPago = async (modo) => {
     const lista = modo === 'todo' ? { items, citas: pendientes } : seleccion
     if (lista.items.length + lista.citas.length === 0) {
       setMensaje({ tipo: 'warning', texto: 'Marca al menos un ítem para pagar.' })
       return
     }
-    const revision = revisarAntesDePagar(sesion.correo, lista.items.map((item) => item.id), new Date(), lista.citas.map((cita) => cita.id))
+    const revision = await revisarPago(sesion.correo, lista.items.map((item) => item.id), lista.citas.map((cita) => cita.id))
     setProblemas(Object.fromEntries(revision.map((problema) => [problema.id, problema.motivo])))
     if (revision.length > 0) {
       setMensaje({ tipo: 'danger', texto: 'Algunos ítems ya no se pueden pagar. Edita su horario o quítalos antes de pagar.' })
@@ -111,18 +131,25 @@ function Carrito() {
     setPagando(modo)
   }
 
-  const pagado = () => {
+  const pagado = async (tarjeta) => {
     const errCorreo = validarCorreoReserva(correo)
     setErrorCorreo(errCorreo)
     if (errCorreo) return
-    const resultado = pagarCarrito({
-      pacienteCorreo: sesion.correo,
-      ids: aPagar.items.map((item) => item.id),
+    setProcesando(true)
+    const resultado = await pagar({
+      correo: sesion.correo,
+      itemIds: aPagar.items.map((item) => item.id),
       citaIds: aPagar.citas.map((cita) => cita.id),
       correoConfirmacion: correo.trim(),
+      tarjeta,
     })
+    setProcesando(false)
     refrescar()
     setPagando(null)
+    if (resultado.rechazado) {
+      navigate('/pago-error', { state: { motivo: resultado.motivo } })
+      return
+    }
     if (!resultado.ok) {
       setProblemas(Object.fromEntries((resultado.problemas ?? []).map((problema) => [problema.id, problema.motivo])))
       setMensaje({ tipo: 'danger', texto: resultado.motivo })
@@ -206,7 +233,8 @@ function Carrito() {
                                 </div>
                               </div>
                               {editando === item.id && (
-                                <EditarHorario item={item} onGuardar={(cambios) => guardarHorario(item, cambios)}
+                                <EditarHorario item={item} servicio={servicios.find((servicio) => servicio.codigo === item.codigoServicio)}
+                                  nutricionistas={nutricionistas} onGuardar={(cambios) => guardarHorario(item, cambios)}
                                   onCancelar={() => setEditando(null)} />
                               )}
                               {problemas[item.id] && <p role="alert" className="text-danger small mt-2 mb-0">{problemas[item.id]}</p>}
@@ -294,7 +322,7 @@ function Carrito() {
                     <Campo id="carrito-correo" etiqueta="Correo de confirmación" type="email" value={correo}
                       onChange={(evento) => setCorreo(evento.target.value)} error={errorCorreo} maxLength={100}
                       ayuda="Solo dominios @duoc.cl, @profesor.duoc.cl o @gmail.com." />
-                    <PagoEnLinea textoBoton={`Pagar ${formatearPrecioCLP(totalAPagar)}`}
+                    <PagoEnLinea textoBoton={`Pagar ${formatearPrecioCLP(totalAPagar)}`} ocupado={procesando}
                       onPagado={pagado} onCancelar={() => setPagando(null)} />
                   </div>
                 )}

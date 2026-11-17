@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
-import { citas, planes, servicios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
 import { calcularReportes } from '../../domain/reportes'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarDatosAdministracion } from '../../services/panel'
 import { fechaLocalISO, formatearPrecioCLP } from '../../utils/formato'
 
 function TablaGrupo({ titulo, primeraColumna, datos }) {
@@ -37,15 +39,19 @@ function rangoDe(atajo, hoy = new Date()) {
   return { desde: '', hasta: '' }
 }
 
+// Reportes calculados en el navegador con las citas y planes de ms-citas y el catálogo de ms-catalogo
+// (el backend no tiene un endpoint de reportes; las reglas de cálculo están en src/domain/reportes.js).
 function Reportes() {
+  const { datos, cargando, error, reintentar } = useCarga(cargarDatosAdministracion)
   const [periodo, setPeriodo] = useState({ desde: '', hasta: '' })
   const periodoInvalido = Boolean(periodo.desde && periodo.hasta && periodo.desde > periodo.hasta)
   const reporte = useMemo(
-    () => calcularReportes({ citas: citas.listar(), servicios: servicios.listar(), planes: planes.listar(), periodo: periodoInvalido ? {} : periodo }),
-    [periodo, periodoInvalido],
+    () => (datos ? calcularReportes({ citas: datos.citas, servicios: datos.servicios, planes: datos.planes, periodo: periodoInvalido ? {} : periodo }) : null),
+    [datos, periodo, periodoInvalido],
   )
   const cambiar = (campo) => (evento) => setPeriodo((periodoAnterior) => ({ ...periodoAnterior, [campo]: evento.target.value }))
 
+  if (!reporte) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="los reportes" />
   return (
     <>
       <h1 className="titulo-seccion">Reportes</h1>

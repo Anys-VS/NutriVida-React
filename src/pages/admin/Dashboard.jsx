@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { citas, planes, servicios, usuarios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
 import { calcularMetricas } from '../../domain/metricas'
-import { cancelarCitasVencidas } from '../../services/reservas'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarDatosAdministracion } from '../../services/panel'
 import { formatearPrecioCLP } from '../../utils/formato'
 
 function Metrica({ etiqueta, valor, enlace, textoEnlace }) {
@@ -17,16 +17,16 @@ function Metrica({ etiqueta, valor, enlace, textoEnlace }) {
   )
 }
 
+// Métricas de la clínica calculadas con los datos de ms-citas, ms-catalogo y ms-identidad (modo 'api').
 function Dashboard() {
-  const metricas = useMemo(() => {
-    cancelarCitasVencidas() // RN-06: deja los datos al día antes de mostrar las métricas
-    return calcularMetricas({
-      citas: citas.listar(),
-      planes: planes.listar(),
-      totalServicios: servicios.listar().length,
-      totalUsuarios: usuarios.listar().length,
-    })
-  }, [])
+  const { datos, cargando, error, reintentar } = useCarga(cargarDatosAdministracion)
+  if (!datos) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="el resumen" />
+  const metricas = calcularMetricas({
+    citas: datos.citas,
+    planes: datos.planes,
+    totalServicios: datos.servicios.length,
+    totalUsuarios: datos.totalUsuarios,
+  })
 
   return (
     <>

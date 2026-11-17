@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import EstadoCarga from '../components/EstadoCarga'
 import ListaServicios from '../components/ListaServicios'
 import { listarServicios } from '../services/catalogo'
 import { useCarga } from '../hooks/useCarga'
@@ -40,13 +41,7 @@ function Servicios() {
             </button>
           ))}
         </div>
-        {cargando && <p className="texto-ayuda" role="status">Cargando servicios…</p>}
-        {error && (
-          <div role="alert" className="alert alert-danger d-flex flex-wrap align-items-center gap-2">
-            <span>No pudimos cargar los servicios: {error.message}</span>
-            <button type="button" className="btn btn-sm btn-outline-danger" onClick={reintentar}>Reintentar</button>
-          </div>
-        )}
+        <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="los servicios" />
         {!cargando && !error && (
           <ListaServicios servicios={visibles} onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)} />
         )}

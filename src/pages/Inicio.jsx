@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import ListaServicios from '../components/ListaServicios'
-import { servicios } from '../data/db'
+import { useCarga } from '../hooks/useCarga'
+import { listarServicios } from '../services/catalogo'
 import { nutricionistas } from '../data/nutricionistas'
 import { describirHorario, iniciales } from '../domain/profesionales'
 
@@ -26,7 +27,10 @@ const BENEFICIOS = [
 
 function Inicio() {
   const navigate = useNavigate()
-  const destacados = CODIGOS_DESTACADOS.map((codigo) => servicios.obtener(codigo)).filter(Boolean)
+  // Si el catálogo no responde, la portada se muestra igual, solo sin servicios destacados.
+  const { datos } = useCarga(listarServicios)
+  const catalogo = datos ?? []
+  const destacados = CODIGOS_DESTACADOS.map((codigo) => catalogo.find((servicio) => servicio.codigo === codigo)).filter(Boolean)
 
   return (
     <>

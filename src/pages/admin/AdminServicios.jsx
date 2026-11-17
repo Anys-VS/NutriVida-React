@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import Campo from '../../components/Campo'
-import { servicios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
 import { TIPO_SERVICIO } from '../../config/reglas'
+import { useCarga } from '../../hooks/useCarga'
+import { eliminarServicio, guardarServicio, listarServiciosAdmin } from '../../services/catalogo'
 import { precioFinal } from '../../domain/precios'
 import { validarNumero, validarTexto } from '../../domain/validaciones'
 import { formatearPrecioCLP } from '../../utils/formato'
@@ -35,14 +37,18 @@ function detalleDe(servicio) {
   return '—'
 }
 
+// CRUD del catálogo (ms-catalogo en modo 'api').
 function AdminServicios() {
-  const [lista, setLista] = useState(() => servicios.listar())
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(listarServiciosAdmin, [version])
+  const lista = datos ?? []
+  const [guardando, setGuardando] = useState(false)
   const [valores, setValores] = useState(VACIO)
   const [errores, setErrores] = useState({})
   const [enEdicion, setEnEdicion] = useState(null)
   const [mensaje, setMensaje] = useState(null)
 
-  const refrescar = () => setLista(servicios.listar())
+  const refrescar = () => setVersion((versionAnterior) => versionAnterior + 1)
   const cambiar = (campo) => (evento) => setValores((anteriores) => ({ ...anteriores, [campo]: evento.target.value }))
 
   const limpiar = () => {
@@ -63,7 +69,7 @@ function AdminServicios() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const guardar = (evento) => {
+  const guardar = async (evento) => {
     evento.preventDefault()
     const nuevos = validar(valores)
     setErrores(nuevos)
@@ -72,11 +78,6 @@ function AdminServicios() {
       return
     }
     const codigo = valores.codigo.trim().toUpperCase()
-    if (!enEdicion && servicios.obtener(codigo)) {
-      setErrores({ ...nuevos, codigo: 'Ya existe un servicio con ese código.' })
-      setMensaje({ tipo: 'danger', texto: 'No se puede guardar un código repetido.' })
-      return
-    }
     const esPlan = valores.tipo === TIPO_SERVICIO.PLAN
     const esTaller = valores.tipo === TIPO_SERVICIO.TALLER
     const servicio = {
@@ -92,16 +93,26 @@ function AdminServicios() {
       cupos: esTaller ? Number(valores.cupos) : undefined,
       descripcion: valores.descripcion.trim(),
     }
-    if (enEdicion) servicios.actualizar(enEdicion, servicio)
-    else servicios.crear(servicio)
+    setGuardando(true)
+    const resultado = await guardarServicio(servicio, enEdicion)
+    setGuardando(false)
+    if (!resultado.ok) {
+      setErrores({ ...nuevos, ...resultado.errores })
+      setMensaje({ tipo: 'danger', texto: resultado.motivo })
+      return
+    }
     refrescar()
     limpiar()
     setMensaje({ tipo: 'success', texto: 'Servicio guardado correctamente.' })
   }
 
-  const eliminar = (servicio) => {
+  const eliminar = async (servicio) => {
     if (!window.confirm(`¿Eliminar "${servicio.nombre}" del catálogo?`)) return
-    servicios.eliminar(servicio.codigo)
+    const resultado = await eliminarServicio(servicio.codigo)
+    if (!resultado.ok) {
+      setMensaje({ tipo: 'danger', texto: resultado.motivo })
+      return
+    }
     refrescar()
     if (enEdicion === servicio.codigo) limpiar()
     setMensaje({ tipo: 'success', texto: 'Servicio eliminado correctamente.' })
@@ -153,11 +164,12 @@ function AdminServicios() {
         <Campo id="admin-servicio-descripcion" etiqueta="Descripción" as="textarea" rows={3} value={valores.descripcion}
           onChange={cambiar('descripcion')} error={errores.descripcion} maxLength={500} />
         <div className="d-flex gap-2">
-          <button type="submit" className="btn btn-nv-primario">Guardar servicio</button>
+          <button type="submit" className="btn btn-nv-primario" disabled={guardando}>Guardar servicio</button>
           {enEdicion && <button type="button" className="btn btn-nv-secundario" onClick={limpiar}>Cancelar edición</button>}
         </div>
       </form>
 
+      <EstadoCarga cargando={cargando && !datos} error={error} reintentar={reintentar} que="el catálogo" />
       <div className="table-responsive">
         <table className="table tabla-admin align-middle">
           <caption className="visually-hidden">Listado de servicios del catálogo</caption>
@@ -168,7 +180,7 @@ function AdminServicios() {
             {lista.map((servicio) => (
               <tr key={servicio.codigo}>
                 <td>{servicio.codigo}</td>
-                <td>{servicio.nombre}</td>
+                <td>{servicio.nombre}{servicio.activo === false && <small className="texto-ayuda d-block">Desactivado</small>}</td>
                 <td>{servicio.tipo}</td>
                 <td>
                   {formatearPrecioCLP(precioFinal(servicio))}

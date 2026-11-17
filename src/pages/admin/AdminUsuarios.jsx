@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Campo from '../../components/Campo'
+import EstadoCarga from '../../components/EstadoCarga'
 import { useSesion } from '../../context/SesionContext'
-import { usuarios } from '../../data/db'
 import { regionesComunas } from '../../data/regiones'
 import { ROL } from '../../config/reglas'
 import { validarContrasena, validarCorreo, validarRUN, validarTexto } from '../../domain/validaciones'
-import { cambiarEstadoUsuario, eliminarUsuario, guardarUsuario } from '../../services/usuarios'
+import { useCarga } from '../../hooks/useCarga'
+import { cambiarEstadoUsuarioAdmin, eliminarUsuarioAdmin, guardarUsuarioAdmin, listarUsuarios } from '../../services/administracion'
 
 const VACIO = {
   run: '', nombre: '', apellidos: '', correo: '', fechaNacimiento: '', tipoUsuario: '',
@@ -30,13 +31,15 @@ function validar(valores, enEdicion) {
 
 function AdminUsuarios() {
   const { sesion } = useSesion()
-  const [lista, setLista] = useState(() => usuarios.listar())
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(listarUsuarios, [version])
+  const lista = datos ?? []
   const [valores, setValores] = useState(VACIO)
   const [errores, setErrores] = useState({})
   const [enEdicion, setEnEdicion] = useState(null)
   const [mensaje, setMensaje] = useState(null)
 
-  const refrescar = () => setLista(usuarios.listar())
+  const refrescar = () => setVersion((versionAnterior) => versionAnterior + 1)
 
   const cambiar = (campo) => (evento) => {
     const valor = evento.target.value
@@ -59,7 +62,7 @@ function AdminUsuarios() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const guardar = (evento) => {
+  const guardar = async (evento) => {
     evento.preventDefault()
     const nuevos = validar(valores, Boolean(enEdicion))
     setErrores(nuevos)
@@ -67,8 +70,9 @@ function AdminUsuarios() {
       setMensaje({ tipo: 'danger', texto: 'Revisa los campos marcados antes de guardar.' })
       return
     }
-    const resultado = guardarUsuario(valores, enEdicion)
+    const resultado = await guardarUsuarioAdmin(valores, enEdicion)
     if (!resultado.ok) {
+      setErrores({ ...nuevos, ...resultado.errores })
       setMensaje({ tipo: 'danger', texto: resultado.motivo })
       return
     }
@@ -77,9 +81,9 @@ function AdminUsuarios() {
     setMensaje({ tipo: 'success', texto: 'Usuario guardado correctamente.' })
   }
 
-  const eliminar = (usuario) => {
+  const eliminar = async (usuario) => {
     if (!window.confirm(`¿Eliminar a ${usuario.nombre} ${usuario.apellidos}?`)) return
-    const resultado = eliminarUsuario(usuario.run, sesion)
+    const resultado = await eliminarUsuarioAdmin(usuario.run, sesion)
     setMensaje(resultado.ok
       ? { tipo: 'success', texto: 'Usuario eliminado correctamente.' }
       : { tipo: 'danger', texto: resultado.motivo })
@@ -87,10 +91,10 @@ function AdminUsuarios() {
     if (resultado.ok && enEdicion === usuario.run) limpiar()
   }
 
-  const alternarEstado = (usuario) => {
+  const alternarEstado = async (usuario) => {
     const activar = usuario.activo === false
     if (!activar && !window.confirm(`¿Desactivar a ${usuario.nombre} ${usuario.apellidos}? No podrá iniciar sesión.`)) return
-    const resultado = cambiarEstadoUsuario(usuario.run, activar, sesion)
+    const resultado = await cambiarEstadoUsuarioAdmin(usuario.run, activar, sesion)
     setMensaje(resultado.ok
       ? { tipo: 'success', texto: activar ? 'Usuario activado.' : 'Usuario desactivado. Su historial se conserva.' }
       : { tipo: 'danger', texto: resultado.motivo })
@@ -147,6 +151,7 @@ function AdminUsuarios() {
         </div>
       </form>
 
+      <EstadoCarga cargando={cargando && !datos} error={error} reintentar={reintentar} que="los usuarios" />
       <div className="table-responsive">
         <table className="table tabla-admin align-middle">
           <caption className="visually-hidden">Listado de usuarios</caption>

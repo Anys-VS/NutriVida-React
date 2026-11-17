@@ -73,11 +73,12 @@ lleva al login y, al entrar, vuelve a la página pedida.
 (`RutaProtegida permiso="..."`), el menú del panel y el Navbar usan esa misma matriz. Sin sesión se va al
 login y se vuelve a la página pedida; con sesión pero sin permiso se muestra "No tienes permiso".
 
-### Estado de la integración (por etapas)
+### Estado de la integración
 
 Cada pantalla usa una capa de datos (`src/services/*`) que lee del backend en modo `api` o del navegador en
 modo `local`, y los adaptadores de `src/api/adaptadores.js` traducen las respuestas (por ejemplo `POR_CONFIRMAR`
-→ "Por confirmar"). Las pruebas `src/api/integracion.test.js` simulan las respuestas reales del backend.
+→ "Por confirmar"). Las pruebas `src/api/integracion*.test.js` simulan las respuestas reales del backend.
+Todas las pantallas están conectadas; solo el formulario de Contacto y el Blog siguen siendo locales (informativos).
 
 | Pantalla | Modo `api` (backend) | Endpoints |
 |---|---|---|
@@ -87,8 +88,21 @@ modo `local`, y los adaptadores de `src/api/adaptadores.js` traducen las respues
 | Mis citas: listar, confirmar y cancelar | ✅ ms-citas | `GET /api/v1/citas`, `PATCH /api/v1/citas/{id}/confirmar`, `/cancelar` |
 | Mis citas: mis compras | ✅ ms-ordenes | `GET /api/v1/ordenes` |
 | Mi progreso | ✅ ms-clinico | `GET /api/v1/fichas/mia` |
-| Reservar, reprogramar, carrito y pago, planes | 🔜 siguiente etapa (en modo `local`) | `GET /citas/disponibilidad`, `POST /citas`, `/carrito`… ya existen en el backend |
-| Panel interno (agenda, fichas, usuarios, reportes) | 🔜 siguiente etapa (en modo `local`) | `/citas`, `/fichas`, `/usuarios`… ya existen en el backend |
+| Inicio, categorías, ofertas y detalle de servicio | ✅ ms-catalogo | `GET /api/v1/servicios`, `/servicios/{codigo}`, `/categorias` |
+| Reservar (horarios reales del día) y reprogramar | ✅ ms-citas | `GET /api/v1/citas/disponibilidad`, `PATCH /citas/{id}/reprogramar` |
+| Reservar y pagar en clínica | ✅ ms-citas | `POST /api/v1/citas` |
+| Carrito: agregar, editar horario, quitar y vaciar | ✅ ms-ordenes | `GET/DELETE /api/v1/carrito`, `POST /carrito/items`, `PUT/DELETE /carrito/items/{id}` |
+| Pago online (carrito, una atención o una cita pendiente) y comprobante | ✅ ms-ordenes → ms-citas | `POST /api/v1/carrito/checkout`, `GET /ordenes/{id}` (al pagar, ms-ordenes agenda las citas en ms-citas) |
+| Planes: saldo de sesiones y agendar sesión | ✅ ms-citas | `GET /api/v1/planes`, `POST /planes/{id}/sesiones` |
+| Gestión de citas (recepción): asistencia, cancelar, pago en clínica y reembolso | ✅ ms-citas | `GET /api/v1/citas`, `PATCH /citas/{id}/asistencia`, `/cancelar`, `/pago-clinica`, `/reembolso` |
+| Agenda del nutricionista, mis pacientes y ficha clínica | ✅ ms-citas y ms-clinico | `GET /api/v1/citas`, `/nutricionistas`, `/fichas`, `POST /fichas`, `PUT /fichas/{correo}`, `POST /fichas/{correo}/mediciones` |
+| Administración de servicios y categorías | ✅ ms-catalogo | CRUD de `/api/v1/servicios` y `PUT /categorias/{id}` |
+| Administración de usuarios, historial y perfil | ✅ ms-identidad | CRUD de `/api/v1/usuarios`, `PATCH /usuarios/{run}/estado`, `GET /auth/me` |
+| Resumen, cupos críticos, planes y reportes | ✅ calculados en el navegador | Con `GET /citas`, `/planes`, `/servicios` y `/usuarios` (el backend no tiene endpoint de reportes) |
+
+Diferencias del modo `api` (por cómo está hecho el backend): cancelar un plan completo con reembolso del 80 %
+se hace en la clínica (el backend no cancela planes); el nutricionista ve el correo de sus pacientes en vez de su
+nombre (no puede leer ms-identidad); y solo el administrador edita su perfil (PUT `/usuarios` es solo de administración).
 
 **Probar con el backend:** levanta MySQL y los 6 servicios del backend (ver su README), crea `.env.local` con
 `VITE_MODO_DATOS=api` y ejecuta `npm run dev`. Vite reenvía `/api` al API Gateway (`http://localhost:8080`).
@@ -149,7 +163,7 @@ para que se carguen las cuentas y fichas nuevas.
 ## Pruebas
 
 Vitest con jsdom y Testing Library. Mocks: `localStorage` en memoria y reloj controlado
-con `vi.useFakeTimers()`. 67 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
+con `vi.useFakeTimers()`. 82 pruebas sobre las reglas de negocio (reserva, confirmación, cancelación
 automática, reembolsos, planes, pagos, cupos críticos, reportes, usuarios, carrito, reprogramación,
 buscador, horarios reales, fichas clínicas, tokens JWT, cliente HTTP y permisos) y sobre los componentes (renderizado, props, estado y
 eventos, incluido el menú según el rol). La cobertura se mide solo sobre los archivos que decidimos

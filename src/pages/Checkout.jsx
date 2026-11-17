@@ -2,16 +2,18 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import Campo from '../components/Campo'
 import CamposTarjeta from '../components/CamposTarjeta'
+import EstadoCarga from '../components/EstadoCarga'
 import { useSesion } from '../context/SesionContext'
-import { servicios } from '../data/db'
 import { leerBorrador, limpiarBorrador } from '../data/sesion'
 import { METODO_PAGO, TIPO_SERVICIO } from '../config/reglas'
+import { usaApi } from '../config/api'
 import { evaluarReserva } from '../domain/citas'
 import { hayErrores, procesarPagoSimulado, validarTarjeta } from '../domain/pagos'
 import { precioFinal } from '../domain/precios'
 import { validarCorreoReserva } from '../domain/validaciones'
-import { reservarCita } from '../services/reservas'
-import { contratarPlan } from '../services/planes'
+import { useCarga } from '../hooks/useCarga'
+import { obtenerServicio } from '../services/catalogo'
+import { reservarAtencion } from '../services/agenda'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 
 const TARJETA_VACIA = { titular: '', numero: '', vencimiento: '', cvv: '' }
@@ -22,7 +24,9 @@ function Checkout() {
   const navigate = useNavigate()
   // Se lee una sola vez: al limpiarlo tras reservar, la página no debe creer que se perdió.
   const [borrador] = useState(leerBorrador)
-  const servicio = borrador ? servicios.obtener(borrador.codigoServicio) : null
+  const { datos: servicio, cargando, error, reintentar } = useCarga(
+    () => (borrador ? obtenerServicio(borrador.codigoServicio) : Promise.resolve(null)), [],
+  )
 
   const [correo, setCorreo] = useState(sesion.correo)
   const [metodo, setMetodo] = useState(METODO_PAGO.ONLINE)
@@ -30,13 +34,21 @@ function Checkout() {
   const [erroresTarjeta, setErroresTarjeta] = useState(SIN_ERRORES)
   const [errorCorreo, setErrorCorreo] = useState('')
   const [errorGeneral, setErrorGeneral] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
+  if (cargando || error) {
+    return (
+      <section className="seccion">
+        <div className="container"><EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="tu reserva" /></div>
+      </section>
+    )
+  }
   if (!borrador || !servicio) return <Navigate to="/servicios" replace />
 
   const esPlan = servicio.tipo === TIPO_SERVICIO.PLAN
   const total = precioFinal(servicio)
 
-  const confirmar = (evento) => {
+  const confirmar = async (evento) => {
     evento.preventDefault()
     setErrorGeneral('')
 
@@ -59,7 +71,8 @@ function Checkout() {
       }
     }
 
-    if (metodo === METODO_PAGO.ONLINE) {
+    // En modo local el pago se simula aquí; en modo 'api' lo decide ms-ordenes (402 = tarjeta rechazada).
+    if (metodo === METODO_PAGO.ONLINE && !usaApi()) {
       const pago = procesarPagoSimulado(tarjeta.numero)
       if (!pago.aprobado) {
         navigate('/pago-error', { state: { motivo: pago.motivo } })
@@ -67,15 +80,22 @@ function Checkout() {
       }
     }
 
-    const datosReserva = {
+    setEnviando(true)
+    const resultado = await reservarAtencion({
       pacienteCorreo: sesion.correo,
       correoConfirmacion: correo.trim(),
-      codigoServicio: servicio.codigo,
+      servicio,
       nutricionista: borrador.nutricionista,
       fechaHora: borrador.fechaHora,
       motivo: borrador.motivo ?? '',
+      metodoPago: metodo,
+      tarjeta,
+    })
+    setEnviando(false)
+    if (resultado.rechazado) {
+      navigate('/pago-error', { state: { motivo: resultado.motivo } })
+      return
     }
-    const resultado = esPlan ? contratarPlan(datosReserva) : reservarCita({ ...datosReserva, metodoPago: metodo })
     if (!resultado.ok) {
       setErrorGeneral(resultado.motivo)
       return
@@ -122,7 +142,7 @@ function Checkout() {
               )}
 
               {errorGeneral && <div role="alert" className="alert alert-danger">{errorGeneral}</div>}
-              <button type="submit" className="btn btn-nv-primario w-100 mt-2">
+              <button type="submit" className="btn btn-nv-primario w-100 mt-2" disabled={enviando}>
                 {metodo === METODO_PAGO.ONLINE ? `Pagar ${formatearPrecioCLP(total)}` : 'Confirmar reserva'}
               </button>
             </form>

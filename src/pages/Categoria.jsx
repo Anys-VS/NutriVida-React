@@ -1,13 +1,23 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import EstadoCarga from '../components/EstadoCarga'
 import ListaServicios from '../components/ListaServicios'
-import { categorias, servicios } from '../data/db'
+import { useCarga } from '../hooks/useCarga'
+import { obtenerCategoria } from '../services/catalogo'
 
 function Categoria() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const categoria = categorias.obtener(slug)
+  const { datos, cargando, error, reintentar } = useCarga(() => obtenerCategoria(slug), [slug])
 
-  if (!categoria) {
+  if (cargando || error) {
+    return (
+      <section className="seccion">
+        <div className="container"><EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="la categoría" /></div>
+      </section>
+    )
+  }
+
+  if (!datos) {
     return (
       <section className="seccion">
         <div className="container">
@@ -19,6 +29,7 @@ function Categoria() {
     )
   }
 
+  const { categoria, servicios } = datos
   return (
     <section className="seccion">
       <div className="container">
@@ -30,10 +41,7 @@ function Categoria() {
         </nav>
         <h1 className="titulo-seccion">{categoria.titulo}</h1>
         <p className="intro-seccion">{categoria.descripcion}</p>
-        <ListaServicios
-          servicios={servicios.listar().filter((servicio) => servicio.tipo === categoria.tipo)}
-          onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)}
-        />
+        <ListaServicios servicios={servicios} onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)} />
       </div>
     </section>
   )
