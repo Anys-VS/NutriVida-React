@@ -35,18 +35,28 @@ export const citasApi = {
   cancelar: (id) => cliente.patch(`/citas/${id}/cancelar`).then(datos),
   reprogramar: (id, cambios) => cliente.patch(`/citas/${id}/reprogramar`, cambios).then(datos),
   registrarAsistencia: (id, estado) => cliente.patch(`/citas/${id}/asistencia`, { estado }).then(datos), // ATENDIDA | INASISTENCIA
+  registrarPagoClinica: (id) => cliente.patch(`/citas/${id}/pago-clinica`).then(datos),
+  registrarReembolso: (id) => cliente.patch(`/citas/${id}/reembolso`).then(datos),
 }
-export const planesApi = crud('/planes')
-// El carrito devuelve { items: [...por reservar], citasPorPagar: [...agendadas con pago pendiente] }.
-// En un plan, `fechaHora` de un ítem es opcional (null = la primera sesión se agenda después de pagar).
+
+// ms-citas: planes pagados con el saldo de sesiones; cada sesión se agenda sin volver a pagar.
+export const planesApi = {
+  listar: () => cliente.get('/planes').then(datos),
+  obtener: (id) => cliente.get(`/planes/${id}`).then(datos),
+  agendarSesion: (id, { fechaHora, nutricionista }) => cliente.post(`/planes/${id}/sesiones`, { fechaHora, nutricionista }).then(datos),
+}
+
+// ms-ordenes. GET /carrito devuelve { items, cantidad, total, maximo }. En un plan, `fechaHora` es opcional
+// (null = la primera sesión se agenda después de pagar). Las citas con pago en clínica se pagan en el mismo
+// checkout con `citaIds`: ms-ordenes le pide a ms-citas que agende lo pagado, todo o nada.
 export const carritoApi = {
   listar: () => cliente.get('/carrito').then(datos),
   agregar: (item) => cliente.post('/carrito/items', item).then(datos),
   editarHorario: (itemId, { nutricionista, fechaHora }) => cliente.put(`/carrito/items/${itemId}`, { nutricionista, fechaHora }).then(datos),
   quitar: (itemId) => cliente.delete(`/carrito/items/${itemId}`).then(datos),
   vaciar: () => cliente.delete('/carrito').then(datos),
-  // Una sola orden con ítems nuevos y citas ya agendadas; todo o nada.
-  pagar: ({ ids, citaIds, correoConfirmacion }) => cliente.post('/ordenes', { items: ids, citas: citaIds, correoConfirmacion }).then(datos),
+  pagar: ({ tarjeta, itemIds, citaIds, correoConfirmacion }) =>
+    cliente.post('/carrito/checkout', { ...tarjeta, itemIds, citaIds, correoConfirmacion }).then(datos),
 }
 // ms-ordenes. GET /ordenes devuelve las del paciente (o todas para el personal).
 export const ordenesApi = { mias: () => cliente.get('/ordenes').then(datos), obtener: (id) => cliente.get(`/ordenes/${id}`).then(datos) }
@@ -65,6 +75,3 @@ export const usuariosApi = {
   ...crud('/usuarios'),
   cambiarEstado: (run, activo) => cliente.patch(`/usuarios/${run}/estado`, { activo }).then(datos),
 }
-
-// ms-agenda (reportes del administrador)
-export const reportesApi = { obtener: ({ desde, hasta } = {}) => cliente.get('/reportes', { params: { desde, hasta } }).then(datos) }

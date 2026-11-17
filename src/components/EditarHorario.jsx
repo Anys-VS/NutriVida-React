@@ -1,7 +1,5 @@
-import { useMemo, useState } from 'react'
-import { citas, servicios } from '../data/db'
-import { nutricionistas } from '../data/nutricionistas'
-import { horariosDisponibles } from '../domain/citas'
+import { useState } from 'react'
+import { useHorarios } from '../hooks/useHorarios'
 import { fechaLocalISO } from '../utils/formato'
 
 const horaLocal = (iso) => {
@@ -11,29 +9,28 @@ const horaLocal = (iso) => {
 
 // Formulario en línea para cambiar el horario de un ítem del carrito (fecha, hora y nutricionista).
 // Muestra solo las horas de la jornada del profesional elegido y marca las ocupadas o muy próximas.
-// onGuardar recibe { nutricionista, fechaHora } y devuelve { ok, motivo } del servicio.
-function EditarHorario({ item, onGuardar, onCancelar }) {
+// onGuardar recibe { nutricionista, fechaHora } y devuelve (o promete) { ok, motivo } del servicio.
+// `servicio` y `nutricionistas` vienen del catálogo (ms-catalogo y ms-citas en modo 'api').
+function EditarHorario({ item, servicio, nutricionistas, onGuardar, onCancelar }) {
   const [nutricionista, setNutricionista] = useState(item.nutricionista ?? '')
   // Un plan sin sesión agendada parte con la fecha y la hora vacías.
   const [fecha, setFecha] = useState(item.fechaHora ? fechaLocalISO(new Date(item.fechaHora)) : '')
   const [hora, setHora] = useState(item.fechaHora ? horaLocal(item.fechaHora) : '')
   const [error, setError] = useState('')
-  const servicio = servicios.obtener(item.codigoServicio)
+  const [guardando, setGuardando] = useState(false)
   const prefijo = `editar-${item.id}`
-
-  const horarios = useMemo(
-    () => (servicio && fecha ? horariosDisponibles({ servicio, nutricionista, fecha, citas: citas.listar() }) : []),
-    [servicio, nutricionista, fecha],
-  )
+  const { horarios, cargando } = useHorarios({ servicio: servicio ?? { codigo: item.codigoServicio }, nutricionista, fecha })
   const horaValida = horarios.some((horario) => horario.hora === hora && horario.disponible)
 
-  const guardar = (evento) => {
+  const guardar = async (evento) => {
     evento.preventDefault()
     if (!fecha || !hora || !horaValida) {
       setError('Elige una fecha y un horario disponible.')
       return
     }
-    const resultado = onGuardar({ nutricionista, fechaHora: `${fecha}T${hora}:00` })
+    setGuardando(true)
+    const resultado = await onGuardar({ nutricionista, fechaHora: `${fecha}T${hora}:00` })
+    setGuardando(false)
     if (!resultado.ok) setError(resultado.motivo)
   }
 
@@ -57,7 +54,7 @@ function EditarHorario({ item, onGuardar, onCancelar }) {
           <label htmlFor={`${prefijo}-hora`} className="form-label small mb-1">Hora</label>
           <select id={`${prefijo}-hora`} className="form-select form-select-sm" value={hora} disabled={horarios.length === 0}
             onChange={(evento) => { setHora(evento.target.value); setError('') }}>
-            <option value="">{horarios.length === 0 ? 'Sin horas' : 'Elige'}</option>
+            <option value="">{cargando ? 'Cargando…' : horarios.length === 0 ? 'Sin horas' : 'Elige'}</option>
             {horarios.map((horario) => (
               <option key={horario.hora} value={horario.hora} disabled={!horario.disponible}>
                 {horario.hora}{horario.disponible ? '' : ` · ${horario.motivo}`}
@@ -66,7 +63,7 @@ function EditarHorario({ item, onGuardar, onCancelar }) {
           </select>
         </div>
       </div>
-      {fecha && horarios.length === 0 && (
+      {fecha && !cargando && horarios.length === 0 && (
         <p className="texto-ayuda small mt-2 mb-0">
           {nutricionista ? `${nutricionista} no atiende ese día.` : 'No hay atención ese día.'} Prueba otra fecha
           {nutricionista ? ' o elige "Sin preferencia"' : ''}.
@@ -74,7 +71,7 @@ function EditarHorario({ item, onGuardar, onCancelar }) {
       )}
       {error && <p role="alert" className="text-danger small mt-2 mb-0">{error}</p>}
       <div className="d-flex flex-wrap gap-2 mt-2">
-        <button type="submit" className="btn btn-nv-primario btn-sm">Guardar horario</button>
+        <button type="submit" className="btn btn-nv-primario btn-sm" disabled={guardando}>Guardar horario</button>
         <button type="button" className="btn btn-nv-secundario btn-sm" onClick={onCancelar}>Cancelar</button>
       </div>
     </form>

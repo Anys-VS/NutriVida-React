@@ -7,8 +7,7 @@ import { ESTADO_CITA, ESTADO_PLAN } from '../config/reglas'
 import { citaTienePagoPendiente, necesitaRecordatorio, puedeCancelarPaciente } from '../domain/citas'
 import { requiereReembolso } from '../domain/metricas'
 import { cancelarPlan, reembolsoPorCancelar } from '../services/planes'
-import { pagarCita } from '../services/reservas'
-import { cancelarMiCita, cargarMisCitas, confirmarMiCita } from '../services/misCitas'
+import { cancelarMiCita, cargarMisCitas, confirmarMiCita, pagarMiCita } from '../services/misCitas'
 import { useCarga } from '../hooks/useCarga'
 import { usaApi } from '../config/api'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
@@ -21,8 +20,8 @@ function MisCitas() {
   )
   const [pagandoId, setPagandoId] = useState(null)
   const [version, setVersion] = useState(0)
-  // En modo 'api' algunas acciones todavía no existen en el backend (pagar una cita sola, reprogramar
-  // desde aquí, planes y detalle de una orden): se ocultan y se mantienen en modo 'local'.
+  // En modo 'api' el plan es simplificado: se agendan sus sesiones, pero cancelarlo completo con
+  // reembolso del 80 % se hace en la clínica (no hay endpoint), por eso ese botón no se muestra.
   const modoApi = usaApi()
 
   // Modo 'api': ms-citas (GET /api/v1/citas) y ms-ordenes (GET /api/v1/ordenes). Modo 'local': el navegador.
@@ -47,7 +46,7 @@ function MisCitas() {
   }
 
   const confirmar = (id) => resolver(confirmarMiCita(id), () => 'Asistencia confirmada. ¡Te esperamos!')
-  const pagado = (id) => resolver(Promise.resolve(pagarCita(id)), () => 'Pago recibido. Tu cita quedó confirmada.')
+  const pagado = (id, tarjeta) => resolver(pagarMiCita(id, tarjeta, sesion.correo), () => 'Pago recibido. Tu cita quedó confirmada.')
 
   const pendientes = lista.filter(citaTienePagoPendiente)
 
@@ -126,9 +125,11 @@ function MisCitas() {
                           {porAgendar > 0 && (
                             <Link to={`/reservar?plan=${plan.id}`} className="btn btn-nv-primario btn-sm">Agendar sesión</Link>
                           )}
-                          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelarElPlan(plan)}>
-                            Cancelar plan
-                          </button>
+                          {!modoApi && (
+                            <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelarElPlan(plan)}>
+                              Cancelar plan
+                            </button>
+                          )}
                         </div>
                       )}
                     </article>
@@ -141,7 +142,7 @@ function MisCitas() {
 
         <h2 className="h3 mb-3">Mis citas y sesiones</h2>
         {/* Las citas con pago pendiente también aparecen en el carrito, el único lugar para pagar varias juntas. */}
-        {!modoApi && pendientes.length > 0 && (
+        {pendientes.length > 0 && (
           <div className="tarjeta-formulario mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <p className="mb-0">
               Tienes {pendientes.length} cita(s) con pago pendiente
@@ -203,12 +204,12 @@ function MisCitas() {
                           Confirmar asistencia
                         </button>
                       )}
-                      {!modoApi && citaTienePagoPendiente(cita) && (
+                      {citaTienePagoPendiente(cita) && (
                         <button type="button" className="btn btn-nv-secundario btn-sm" onClick={() => setPagandoId(cita.id)}>
                           Pagar ahora
                         </button>
                       )}
-                      {!modoApi && puedeCancelar && (
+                      {puedeCancelar && (
                         <Link to={`/reservar?reprogramar=${cita.id}`} className="btn btn-outline-secondary btn-sm">Reprogramar</Link>
                       )}
                       {puedeCancelar && (
@@ -222,7 +223,7 @@ function MisCitas() {
                     </div>
 
                     {pagandoId === cita.id && (
-                      <PagoEnLinea onPagado={() => pagado(cita.id)} onCancelar={() => setPagandoId(null)} />
+                      <PagoEnLinea onPagado={(tarjeta) => pagado(cita.id, tarjeta)} onCancelar={() => setPagandoId(null)} />
                     )}
                   </article>
                 </li>
@@ -244,7 +245,7 @@ function MisCitas() {
                       <td>{formatearFechaHora(orden.fecha)}</td>
                       <td>{orden.detalle.length}</td>
                       <td className="text-end">{formatearPrecioCLP(orden.total)}</td>
-                      <td>{!modoApi && <Link to={`/orden/${orden.id}`}>Ver detalle</Link>}</td>
+                      <td><Link to={`/orden/${orden.id}`}>Ver detalle</Link></td>
                     </tr>
                   ))}
                 </tbody>
