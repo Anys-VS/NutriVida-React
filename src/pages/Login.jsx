@@ -1,4 +1,5 @@
-﻿import { useState } from 'react'
+
+import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import FormularioLogin from '../components/FormularioLogin'
 import { useSesion } from '../context/SesionContext'
@@ -17,6 +18,7 @@ function Login() {
   const [errorAuth, setErrorAuth] = useState('')
   const desde = params.get('desde')
 
+  // Quien ya tiene sesión no necesita el formulario.
   if (sesion) {
     return (
       <Navigate
@@ -26,6 +28,7 @@ function Login() {
     )
   }
 
+  // El servicio solicita los tokens y guarda la sesión.
   const entrar = async ({ correo, contrasena }) => {
     setErrorAuth('')
 
