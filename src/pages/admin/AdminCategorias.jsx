@@ -1,23 +1,29 @@
 import { useState } from 'react'
 import Campo from '../../components/Campo'
-import { categorias, servicios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
+import { usaApi } from '../../config/api'
 import { validarTexto } from '../../domain/validaciones'
+import { useCarga } from '../../hooks/useCarga'
+import { guardarCategoria, listarCategorias, listarServiciosAdmin } from '../../services/catalogo'
 
+// Textos de las categorías (ms-catalogo en modo 'api', donde se edita la descripción).
 function AdminCategorias() {
-  const [lista, setLista] = useState(() => categorias.listar())
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(() => Promise.all([listarCategorias(), listarServiciosAdmin()]), [version])
+  const [lista, todos] = datos ?? [[], []]
   const [enEdicion, setEnEdicion] = useState(null)
   const [valores, setValores] = useState({ titulo: '', descripcion: '' })
   const [errores, setErrores] = useState({})
   const [mensaje, setMensaje] = useState(null)
-  const todos = servicios.listar()
+  const tituloFijo = usaApi() // en el backend el nombre de la categoría es el tipo de servicio: no se cambia
 
-  const cargar = (c) => {
-    setEnEdicion(c.slug)
-    setValores({ titulo: c.titulo, descripcion: c.descripcion })
+  const cargar = (categoria) => {
+    setEnEdicion(categoria)
+    setValores({ titulo: categoria.titulo, descripcion: categoria.descripcion })
     setErrores({})
   }
 
-  const guardar = (evento) => {
+  const guardar = async (evento) => {
     evento.preventDefault()
     const nuevos = {
       titulo: validarTexto(valores.titulo, { etiqueta: 'El título', maximo: 60 }),
@@ -25,8 +31,12 @@ function AdminCategorias() {
     }
     setErrores(nuevos)
     if (Object.values(nuevos).some(Boolean)) return
-    categorias.actualizar(enEdicion, { titulo: valores.titulo.trim(), descripcion: valores.descripcion.trim() })
-    setLista(categorias.listar())
+    const resultado = await guardarCategoria(enEdicion, { titulo: valores.titulo.trim(), descripcion: valores.descripcion.trim() })
+    if (!resultado.ok) {
+      setMensaje({ tipo: 'danger', texto: resultado.motivo })
+      return
+    }
+    setVersion((versionAnterior) => versionAnterior + 1)
     setEnEdicion(null)
     setMensaje({ tipo: 'success', texto: 'Categoría actualizada correctamente.' })
   }
@@ -43,10 +53,11 @@ function AdminCategorias() {
       {enEdicion && (
         <form className="tarjeta-formulario mb-4" onSubmit={guardar} noValidate>
           <h2 className="h4 mb-3">Editar categoría</h2>
-          <Campo id="admin-categoria-titulo" etiqueta="Título" value={valores.titulo} error={errores.titulo}
-            onChange={(e) => setValores((v) => ({ ...v, titulo: e.target.value }))} maxLength={60} />
+          <Campo id="admin-categoria-titulo" etiqueta="Título" value={valores.titulo} error={errores.titulo} readOnly={tituloFijo}
+            ayuda={tituloFijo ? 'El título identifica el tipo de servicio y no se modifica.' : undefined}
+            onChange={(evento) => setValores((anteriores) => ({ ...anteriores, titulo: evento.target.value }))} maxLength={60} />
           <Campo id="admin-categoria-descripcion" etiqueta="Descripción" as="textarea" rows={3} value={valores.descripcion}
-            error={errores.descripcion} onChange={(e) => setValores((v) => ({ ...v, descripcion: e.target.value }))} maxLength={200} />
+            error={errores.descripcion} onChange={(evento) => setValores((anteriores) => ({ ...anteriores, descripcion: evento.target.value }))} maxLength={200} />
           <div className="d-flex gap-2">
             <button type="submit" className="btn btn-nv-primario">Guardar categoría</button>
             <button type="button" className="btn btn-nv-secundario" onClick={() => setEnEdicion(null)}>Cancelar edición</button>
@@ -54,17 +65,18 @@ function AdminCategorias() {
         </form>
       )}
 
+      <EstadoCarga cargando={cargando && !datos} error={error} reintentar={reintentar} que="las categorías" />
       <div className="table-responsive">
         <table className="table tabla-admin align-middle">
           <caption className="visually-hidden">Categorías de servicios</caption>
           <thead><tr><th>Título</th><th>Tipo de servicio</th><th>Servicios</th><th>Acciones</th></tr></thead>
           <tbody>
-            {lista.map((c) => (
-              <tr key={c.slug}>
-                <td>{c.titulo}<br /><small className="texto-ayuda">{c.descripcion}</small></td>
-                <td>{c.tipo}</td>
-                <td>{todos.filter((s) => s.tipo === c.tipo).length}</td>
-                <td><button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(c)}>Editar</button></td>
+            {lista.map((categoria) => (
+              <tr key={categoria.slug}>
+                <td>{categoria.titulo}<br /><small className="texto-ayuda">{categoria.descripcion}</small></td>
+                <td>{categoria.tipo}</td>
+                <td>{todos.filter((servicio) => servicio.tipo === categoria.tipo).length}</td>
+                <td><button type="button" className="btn btn-sm btn-nv-secundario" onClick={() => cargar(categoria)}>Editar</button></td>
               </tr>
             ))}
           </tbody>

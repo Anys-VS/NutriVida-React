@@ -3,8 +3,8 @@
 function digitoVerificador(cuerpo) {
   let suma = 0
   let multiplo = 2
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * multiplo
+  for (let posicion = cuerpo.length - 1; posicion >= 0; posicion--) {
+    suma += Number(cuerpo[posicion]) * multiplo
     multiplo = multiplo === 7 ? 2 : multiplo + 1
   }
   const resto = 11 - (suma % 11)
@@ -20,11 +20,11 @@ export function validarRUN(valor) {
   if (run.length < 7 || run.length > 9) return 'El RUN debe tener entre 7 y 9 caracteres.'
 
   const cuerpo = run.slice(0, -1)
-  const dv = run.slice(-1)
-  if (!/^\d+$/.test(cuerpo) || !/^[0-9K]$/.test(dv)) {
+  const digitoIngresado = run.slice(-1)
+  if (!/^\d+$/.test(cuerpo) || !/^[0-9K]$/.test(digitoIngresado)) {
     return 'El RUN solo puede contener números y, al final, un dígito verificador.'
   }
-  if (digitoVerificador(cuerpo) !== dv) return 'El dígito verificador del RUN no es válido.'
+  if (digitoVerificador(cuerpo) !== digitoIngresado) return 'El dígito verificador del RUN no es válido.'
   return ''
 }
 

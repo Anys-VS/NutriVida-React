@@ -1,39 +1,37 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import EstadoBadge from '../../components/EstadoBadge'
-import { ESTADO_CITA } from '../../config/reglas'
+import EstadoCarga from '../../components/EstadoCarga'
+import { useSesion } from '../../context/SesionContext'
+import { ESTADO_CITA, ESTADO_PAGO } from '../../config/reglas'
 import { requiereReembolso } from '../../domain/metricas'
-import { citas, usuarios } from '../../data/db'
+import { useCarga } from '../../hooks/useCarga'
 import {
-  cancelarCitasVencidas, cancelarPorClinica, marcarAtendida, marcarInasistencia,
-  registrarPagoEnClinica, registrarReembolso,
-} from '../../services/reservas'
+  cancelarComoClinica, cargarCitasPersonal, nombreDe, registrarAsistencia, registrarPagoEnClinica, registrarReembolso,
+} from '../../services/panel'
 import { formatearFechaHora, formatearPrecioCLP } from '../../utils/formato'
 
+// Todas las citas de la clínica (ms-citas en modo 'api'): asistencia, cancelación, pago en clínica y reembolsos.
 function AdminCitas() {
-  const [lista, setLista] = useState(() => citas.listar())
+  const { sesion } = useSesion()
+  const [version, setVersion] = useState(0)
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarCitasPersonal(sesion), [version])
+  const lista = datos?.citas ?? []
+  const usuariosIndice = datos?.usuarios ?? {}
   const [estado, setEstado] = useState('Todas')
   const [busqueda, setBusqueda] = useState('')
   const [mensaje, setMensaje] = useState(null)
 
-  const refrescar = useCallback(() => setLista(citas.listar()), [])
-
-  // RN-06: al entrar se cancelan las citas cuyo plazo de confirmación venció.
+  // RN-06 en modo local: al entrar se cancelan las citas cuyo plazo de confirmación venció.
   useEffect(() => {
-    const canceladas = cancelarCitasVencidas()
-    if (canceladas > 0) {
-      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${canceladas} cita(s) por falta de confirmación a tiempo.` })
+    if (datos?.canceladas > 0) {
+      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${datos.canceladas} cita(s) por falta de confirmación a tiempo.` })
     }
-    refrescar()
-  }, [refrescar])
+  }, [datos])
 
-  const nombres = useMemo(
-    () => Object.fromEntries(usuarios.listar().map((u) => [u.correo.toLowerCase(), `${u.nombre} ${u.apellidos}`])),
-    [],
-  )
-
-  const ejecutar = (resultado, textoOk) => {
+  const ejecutar = async (accion, textoOk) => {
+    const resultado = await accion
     setMensaje(resultado.ok ? { tipo: 'success', texto: textoOk(resultado) } : { tipo: 'danger', texto: resultado.motivo })
-    refrescar()
+    setVersion((versionAnterior) => versionAnterior + 1)
   }
   const conConfirmacion = (pregunta, accion) => () => {
     if (window.confirm(pregunta)) accion()
@@ -41,28 +39,29 @@ function AdminCitas() {
 
   const texto = busqueda.trim().toLowerCase()
   const visibles = lista
-    .filter((c) => estado === 'Todas' || c.estadoCita === estado)
-    .filter((c) => !texto || `${c.pacienteCorreo} ${nombres[c.pacienteCorreo.toLowerCase()] ?? ''} ${c.nombreServicio}`.toLowerCase().includes(texto))
-    .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+    .filter((cita) => estado === 'Todas' || cita.estadoCita === estado)
+    .filter((cita) => !texto || `${cita.pacienteCorreo} ${nombreDe(usuariosIndice, cita.pacienteCorreo)} ${cita.nombreServicio}`.toLowerCase().includes(texto))
+    .sort((citaA, citaB) => new Date(citaA.fechaHora) - new Date(citaB.fechaHora))
 
   return (
     <>
       <h1 className="titulo-seccion">Citas</h1>
       <p className="intro-seccion">Marca la asistencia, registra pagos en la clínica y gestiona los reembolsos.</p>
       {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
+      <EstadoCarga cargando={cargando && !datos} error={error} reintentar={reintentar} que="las citas" />
 
       <div className="tarjeta-formulario mb-4">
         <div className="row g-3">
           <div className="col-md-4">
             <label htmlFor="filtro-estado" className="form-label">Estado</label>
-            <select id="filtro-estado" className="form-select" value={estado} onChange={(e) => setEstado(e.target.value)}>
+            <select id="filtro-estado" className="form-select" value={estado} onChange={(evento) => setEstado(evento.target.value)}>
               <option>Todas</option>
-              {Object.values(ESTADO_CITA).map((e) => <option key={e}>{e}</option>)}
+              {Object.values(ESTADO_CITA).map((estadoOpcion) => <option key={estadoOpcion}>{estadoOpcion}</option>)}
             </select>
           </div>
           <div className="col-md-8">
             <label htmlFor="filtro-busqueda" className="form-label">Buscar por paciente o servicio</label>
-            <input id="filtro-busqueda" className="form-control" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <input id="filtro-busqueda" className="form-control" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} />
           </div>
         </div>
       </div>
@@ -75,35 +74,35 @@ function AdminCitas() {
           </thead>
           <tbody>
             {visibles.length === 0 && <tr><td colSpan={6} className="text-center">No hay citas para mostrar.</td></tr>}
-            {visibles.map((c) => (
-              <tr key={c.id}>
-                <td>{nombres[c.pacienteCorreo.toLowerCase()] ?? c.pacienteCorreo}<br /><small className="texto-ayuda">{c.pacienteCorreo}</small></td>
-                <td>{c.nombreServicio}<br /><small className="texto-ayuda">{c.nutricionista || 'Sin preferencia'}</small></td>
-                <td>{formatearFechaHora(c.fechaHora)}</td>
-                <td><EstadoBadge estado={c.estadoCita} /></td>
-                <td><EstadoBadge estado={c.estadoPago} /><br /><small>{c.planId ? 'Incluida en el plan' : `${formatearPrecioCLP(c.precio)} · ${c.metodoPago}`}</small></td>
+            {visibles.map((cita) => (
+              <tr key={cita.id}>
+                <td>{nombreDe(usuariosIndice, cita.pacienteCorreo)}<br /><small className="texto-ayuda">{cita.pacienteCorreo}</small></td>
+                <td>{cita.nombreServicio}<br /><small className="texto-ayuda">{cita.nutricionista || 'Sin preferencia'}</small></td>
+                <td>{formatearFechaHora(cita.fechaHora)}</td>
+                <td><EstadoBadge estado={cita.estadoCita} /></td>
+                <td><EstadoBadge estado={cita.estadoPago} /><br /><small>{cita.planId ? 'Incluida en el plan' : `${formatearPrecioCLP(cita.precio)} · ${cita.metodoPago}`}</small></td>
                 <td>
                   <div className="d-flex gap-2 flex-wrap">
-                    {c.estadoCita === ESTADO_CITA.CONFIRMADA && (
+                    {cita.estadoCita === ESTADO_CITA.CONFIRMADA && (
                       <>
                         <button type="button" className="btn btn-sm btn-nv-primario"
-                          onClick={() => ejecutar(marcarAtendida(c.id), () => 'Cita marcada como atendida.')}>Atendida</button>
+                          onClick={() => ejecutar(registrarAsistencia(cita.id, true), () => 'Cita marcada como atendida.')}>Atendida</button>
                         <button type="button" className="btn btn-sm btn-nv-secundario"
-                          onClick={conConfirmacion('¿Registrar inasistencia?', () => ejecutar(marcarInasistencia(c.id), () => 'Inasistencia registrada.'))}>Inasistencia</button>
+                          onClick={conConfirmacion('¿Registrar inasistencia?', () => ejecutar(registrarAsistencia(cita.id, false), () => 'Inasistencia registrada.'))}>Inasistencia</button>
                       </>
                     )}
-                    {[ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(c.estadoCita) && (
+                    {[ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(cita.estadoCita) && (
                       <button type="button" className="btn btn-sm btn-outline-danger"
-                        onClick={conConfirmacion('¿Cancelar esta cita?', () => ejecutar(cancelarPorClinica(c.id), () => 'Cita cancelada.'))}>Cancelar</button>
+                        onClick={conConfirmacion('¿Cancelar esta cita?', () => ejecutar(cancelarComoClinica(cita.id), () => 'Cita cancelada.'))}>Cancelar</button>
                     )}
-                    {c.estadoPago === 'Pendiente' && [ESTADO_CITA.CONFIRMADA, ESTADO_CITA.ATENDIDA].includes(c.estadoCita) && (
+                    {cita.estadoPago === ESTADO_PAGO.PENDIENTE && [ESTADO_CITA.CONFIRMADA, ESTADO_CITA.ATENDIDA].includes(cita.estadoCita) && (
                       <button type="button" className="btn btn-sm btn-outline-success"
-                        onClick={() => ejecutar(registrarPagoEnClinica(c.id), () => 'Pago registrado.')}>Registrar pago</button>
+                        onClick={() => ejecutar(registrarPagoEnClinica(cita.id), () => 'Pago registrado.')}>Registrar pago</button>
                     )}
-                    {requiereReembolso(c) && (
+                    {requiereReembolso(cita) && (
                       <button type="button" className="btn btn-sm btn-outline-primary"
-                        onClick={() => ejecutar(registrarReembolso(c.id), (r) => `Reembolso de ${formatearPrecioCLP(r.reembolso)} registrado.`)}>
-                        Reembolsar {formatearPrecioCLP(c.montoPagado)}
+                        onClick={() => ejecutar(registrarReembolso(cita.id), (resultado) => `Reembolso de ${formatearPrecioCLP(resultado.reembolso)} registrado.`)}>
+                        Reembolsar {formatearPrecioCLP(cita.montoPagado)}
                       </button>
                     )}
                   </div>

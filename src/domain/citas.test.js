@@ -31,7 +31,7 @@ describe('horariosDisponibles', () => {
     const horarios = horariosDisponibles({
       servicio, nutricionista: 'Carolina Fuentes', fecha: '2026-11-11', citas: [ocupada], ahora,
     })
-    const estado = (hora) => horarios.find((h) => h.hora === hora)
+    const estado = (hora) => horarios.find((horario) => horario.hora === hora)
 
     expect(estado('10:00')).toMatchObject({ disponible: false, motivo: 'Muy próximo' }) // falta 1 h
     expect(estado('14:00')).toMatchObject({ disponible: false, motivo: 'Ocupado' })

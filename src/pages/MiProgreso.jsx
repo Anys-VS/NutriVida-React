@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom'
 import ProgresoPaciente from '../components/ProgresoPaciente'
 import { useSesion } from '../context/SesionContext'
-import { obtenerFicha } from '../services/clinico'
+import { cargarMiFicha } from '../services/miProgreso'
+import { useCarga } from '../hooks/useCarga'
 
 // El paciente consulta su progreso y su plan alimenticio en cualquier momento (solo lectura).
 function MiProgreso() {
   const { sesion } = useSesion()
-  const resultado = obtenerFicha(sesion.correo, sesion)
-  const ficha = resultado.ok ? resultado.ficha : null
+  // Modo 'api': GET /api/v1/fichas/mia en ms-clinico. Modo 'local': ficha guardada en el navegador.
+  const { datos: ficha, cargando, error, reintentar } = useCarga(() => cargarMiFicha(sesion), [sesion.correo])
 
   return (
     <section className="seccion">
@@ -16,7 +17,14 @@ function MiProgreso() {
         <p className="intro-seccion">
           Revisa tus mediciones y tu plan alimenticio cuando quieras. Los registra tu nutricionista en cada control.
         </p>
-        {!ficha || (ficha.mediciones.length === 0 && !ficha.planAlimenticio) ? (
+        {cargando && <p className="texto-ayuda" role="status">Cargando tu progreso…</p>}
+        {error && (
+          <div role="alert" className="alert alert-danger d-flex flex-wrap align-items-center gap-2">
+            <span>No pudimos cargar tu progreso: {error.message}</span>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={reintentar}>Reintentar</button>
+          </div>
+        )}
+        {cargando || error ? null : !ficha || (ficha.mediciones.length === 0 && !ficha.planAlimenticio) ? (
           <div className="tarjeta-formulario text-center">
             <h2 className="h4">Aún no tienes registros</h2>
             <p className="mb-3">Después de tu primer control verás aquí tu evolución y tu plan alimenticio.</p>

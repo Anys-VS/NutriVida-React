@@ -39,8 +39,8 @@ describe('fichas y agenda del nutricionista', () => {
 
     expect(agendaDe(rodrigo)).toHaveLength(1)
     expect(agendaDe(carolina)).toHaveLength(0)
-    expect(pacientesDe(rodrigo).map((p) => p.correo)).toEqual(['nuevo@gmail.com'])
-    expect(pacientesDe(carolina).map((p) => p.correo)).toEqual(['paciente@gmail.com']) // asignada en su ficha
+    expect(pacientesDe(rodrigo).map((paciente) => paciente.correo)).toEqual(['nuevo@gmail.com'])
+    expect(pacientesDe(carolina).map((paciente) => paciente.correo)).toEqual(['paciente@gmail.com']) // asignada en su ficha
     expect(obtenerFicha('nuevo@gmail.com', rodrigo)).toMatchObject({ ok: true, puedeEditar: true })
   })
 })

@@ -1,7 +1,7 @@
 // Reglas puras del carrito. Un ítem es una cita o un plan con su fecha, hora y nutricionista.
 import { REGLAS } from '../config/reglas'
 
-const mismoMomento = (a, b) => new Date(a).getTime() === new Date(b).getTime()
+const mismoMomento = (fechaA, fechaB) => new Date(fechaA).getTime() === new Date(fechaB).getTime()
 
 export function totalDe(items) {
   return items.reduce((suma, item) => suma + (Number(item.precio) || 0), 0)

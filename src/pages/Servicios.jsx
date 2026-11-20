@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import EstadoCarga from '../components/EstadoCarga'
 import ListaServicios from '../components/ListaServicios'
-import { servicios } from '../data/db'
+import { listarServicios } from '../services/catalogo'
+import { useCarga } from '../hooks/useCarga'
 
 const FILTROS = [
   { tipo: 'Todos', etiqueta: 'Todos' },
@@ -14,7 +16,9 @@ const FILTROS = [
 function Servicios() {
   const navigate = useNavigate()
   const [tipo, setTipo] = useState('Todos')
-  const todos = servicios.listar()
+  // Ejemplo de página conectada a la API: GET /api/v1/servicios (o datos locales en modo 'local').
+  const { datos, cargando, error, reintentar } = useCarga(listarServicios)
+  const todos = datos ?? []
   const visibles = tipo === 'Todos' ? todos : todos.filter((servicio) => servicio.tipo === tipo)
 
   return (
@@ -37,7 +41,10 @@ function Servicios() {
             </button>
           ))}
         </div>
-        <ListaServicios servicios={visibles} onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)} />
+        <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="los servicios" />
+        {!cargando && !error && (
+          <ListaServicios servicios={visibles} onReservar={(codigo) => navigate(`/reservar?servicio=${codigo}`)} />
+        )}
       </div>
     </section>
   )

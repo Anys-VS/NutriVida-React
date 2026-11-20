@@ -1,20 +1,20 @@
 import { Link, useParams } from 'react-router-dom'
 import EstadoBadge from '../../components/EstadoBadge'
-import { usuarios } from '../../data/db'
-import { citasDePaciente } from '../../services/reservas'
-import { planesDePaciente } from '../../services/planes'
+import EstadoCarga from '../../components/EstadoCarga'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarHistorial } from '../../services/administracion'
 import { formatearFechaHora, formatearPrecioCLP } from '../../utils/formato'
 
 function Historial() {
   const { run } = useParams()
-  const usuario = usuarios.obtener(run)
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarHistorial(run), [run])
 
-  if (!usuario) {
+  if (cargando || error) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="el historial" />
+  if (!datos) {
     return <p className="mensaje-detalle-error">No encontramos ese usuario. <Link to="/admin/usuarios">Volver a Usuarios</Link>.</p>
   }
 
-  const citas = citasDePaciente(usuario.correo)
-  const planes = planesDePaciente(usuario.correo)
+  const { usuario, citas, planes } = datos
 
   return (
     <>
@@ -34,11 +34,11 @@ function Historial() {
           <thead><tr><th>Plan</th><th>Sesiones atendidas</th><th>Estado</th><th>Pago</th></tr></thead>
           <tbody>
             {planes.length === 0 && <tr><td colSpan={4} className="text-center">Sin planes contratados.</td></tr>}
-            {planes.map((p) => (
-              <tr key={p.id}>
-                <td>{p.nombre}</td><td>{p.resumen.atendidas} de {p.resumen.total}</td>
-                <td><EstadoBadge estado={p.estadoPlan} /></td>
-                <td><EstadoBadge estado={p.estadoPago} /> {formatearPrecioCLP(p.montoPagado)}</td>
+            {planes.map((plan) => (
+              <tr key={plan.id}>
+                <td>{plan.nombre}</td><td>{plan.resumen.atendidas} de {plan.resumen.total}</td>
+                <td><EstadoBadge estado={plan.estadoPlan} /></td>
+                <td><EstadoBadge estado={plan.estadoPago} /> {formatearPrecioCLP(plan.montoPagado)}</td>
               </tr>
             ))}
           </tbody>
@@ -52,11 +52,11 @@ function Historial() {
           <thead><tr><th>Servicio</th><th>Fecha y hora</th><th>Estado</th><th>Pago</th></tr></thead>
           <tbody>
             {citas.length === 0 && <tr><td colSpan={4} className="text-center">Sin citas registradas.</td></tr>}
-            {citas.map((c) => (
-              <tr key={c.id}>
-                <td>{c.nombreServicio}</td><td>{formatearFechaHora(c.fechaHora)}</td>
-                <td><EstadoBadge estado={c.estadoCita} /></td>
-                <td>{c.planId ? 'Incluida en el plan' : <><EstadoBadge estado={c.estadoPago} /> {formatearPrecioCLP(c.precio)}</>}</td>
+            {citas.map((cita) => (
+              <tr key={cita.id}>
+                <td>{cita.nombreServicio}</td><td>{formatearFechaHora(cita.fechaHora)}</td>
+                <td><EstadoBadge estado={cita.estadoCita} /></td>
+                <td>{cita.planId ? 'Incluida en el plan' : <><EstadoBadge estado={cita.estadoPago} /> {formatearPrecioCLP(cita.precio)}</>}</td>
               </tr>
             ))}
           </tbody>

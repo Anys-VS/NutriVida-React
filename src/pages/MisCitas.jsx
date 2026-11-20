@@ -1,79 +1,58 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import EstadoBadge from '../components/EstadoBadge'
 import PagoEnLinea from '../components/PagoEnLinea'
 import { useSesion } from '../context/SesionContext'
 import { ESTADO_CITA, ESTADO_PLAN } from '../config/reglas'
 import { citaTienePagoPendiente, necesitaRecordatorio, puedeCancelarPaciente } from '../domain/citas'
 import { requiereReembolso } from '../domain/metricas'
-import { cancelarPlan, planesDePaciente, reembolsoPorCancelar } from '../services/planes'
-import { ordenesDePaciente, pagarCitasPendientes } from '../services/carrito'
-import {
-  cancelarCita, cancelarCitasVencidas, citasDePaciente, confirmarAsistencia, pagarCita,
-} from '../services/reservas'
+import { cancelarPlan, reembolsoPorCancelar } from '../services/planes'
+import { cancelarMiCita, cargarMisCitas, confirmarMiCita, pagarMiCita } from '../services/misCitas'
+import { useCarga } from '../hooks/useCarga'
+import { usaApi } from '../config/api'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 
 function MisCitas() {
   const { sesion } = useSesion()
   const ubicacion = useLocation()
-  const navigate = useNavigate()
-  const [lista, setLista] = useState(() => citasDePaciente(sesion.correo))
-  const [misPlanes, setMisPlanes] = useState(() => planesDePaciente(sesion.correo))
   const [mensaje, setMensaje] = useState(
     ubicacion.state?.mensaje ? { tipo: 'success', texto: ubicacion.state.mensaje } : null,
   )
   const [pagandoId, setPagandoId] = useState(null)
-  const [porPagar, setPorPagar] = useState(() => new Set())
-  const [pagandoVarias, setPagandoVarias] = useState(false)
-  const misOrdenes = ordenesDePaciente(sesion.correo)
+  const [version, setVersion] = useState(0)
+  // En modo 'api' el plan es simplificado: se agendan sus sesiones, pero cancelarlo completo con
+  // reembolso del 80 % se hace en la clínica (no hay endpoint), por eso ese botón no se muestra.
+  const modoApi = usaApi()
 
-  const refrescar = useCallback(() => {
-    setLista(citasDePaciente(sesion.correo))
-    setMisPlanes(planesDePaciente(sesion.correo))
-  }, [sesion.correo])
+  // Modo 'api': ms-citas (GET /api/v1/citas) y ms-ordenes (GET /api/v1/ordenes). Modo 'local': el navegador.
+  const { datos, cargando, error, reintentar } = useCarga(() => cargarMisCitas(sesion.correo), [sesion.correo, version])
+  const lista = datos?.citas ?? []
+  const misPlanes = datos?.planes ?? []
+  const misOrdenes = datos?.ordenes ?? []
+  const refrescar = () => setVersion((versionAnterior) => versionAnterior + 1)
 
-  // RN-06: al entrar se cancelan las citas cuyo plazo de confirmación venció.
+  // RN-06 en modo local: al cargar se cancelan las citas cuyo plazo de confirmación venció.
   useEffect(() => {
-    const canceladas = cancelarCitasVencidas()
-    if (canceladas > 0) {
-      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${canceladas} cita(s) por falta de confirmación a tiempo.` })
+    if (datos?.canceladas > 0) {
+      setMensaje({ tipo: 'warning', texto: `Se cancelaron ${datos.canceladas} cita(s) por falta de confirmación a tiempo.` })
     }
-    refrescar()
-  }, [refrescar])
+  }, [datos])
 
-  const resolver = (resultado, textoOk) => {
+  const resolver = async (accion, textoOk) => {
+    const resultado = await accion
     setMensaje(resultado.ok ? { tipo: 'success', texto: textoOk(resultado) } : { tipo: 'danger', texto: resultado.motivo })
     setPagandoId(null)
     refrescar()
   }
 
-  const confirmar = (id) => resolver(confirmarAsistencia(id), () => 'Asistencia confirmada. ¡Te esperamos!')
-  const pagado = (id) => resolver(pagarCita(id), () => 'Pago recibido. Tu cita quedó confirmada.')
+  const confirmar = (id) => resolver(confirmarMiCita(id), () => 'Asistencia confirmada. ¡Te esperamos!')
+  const pagado = (id, tarjeta) => resolver(pagarMiCita(id, tarjeta, sesion.correo), () => 'Pago recibido. Tu cita quedó confirmada.')
 
   const pendientes = lista.filter(citaTienePagoPendiente)
-  const elegidas = pendientes.filter((c) => porPagar.has(c.id))
-  const totalElegidas = elegidas.reduce((suma, c) => suma + c.precio, 0)
-  const alternarPago = (id) => {
-    setPagandoVarias(false)
-    setPorPagar((actual) => {
-      const nuevo = new Set(actual)
-      if (nuevo.has(id)) nuevo.delete(id)
-      else nuevo.add(id)
-      return nuevo
-    })
-  }
-  const pagarVarias = () => {
-    const resultado = pagarCitasPendientes({ pacienteCorreo: sesion.correo, ids: elegidas.map((c) => c.id) })
-    if (!resultado.ok) {
-      resolver(resultado, () => '')
-      return
-    }
-    navigate(`/orden/${resultado.orden.id}`)
-  }
 
   const cancelar = (cita) => {
     if (!window.confirm('¿Quieres cancelar esta cita?')) return
-    resolver(cancelarCita(cita.id), ({ reembolsoPendiente }) => {
+    resolver(cancelarMiCita(cita.id), ({ reembolsoPendiente }) => {
       if (cita.planId) return 'Sesión cancelada. Vuelve al saldo de tu plan para que la reagendes.'
       return reembolsoPendiente > 0
         ? `Cita cancelada. Tu reembolso de ${formatearPrecioCLP(reembolsoPendiente)} quedó pendiente: la clínica lo registrará.`
@@ -87,7 +66,7 @@ function MisCitas() {
       ? `Se te devolverá el 80% del plan: ${formatearPrecioCLP(reembolso)}.`
       : 'No habrá reembolso porque ya tuviste al menos una sesión atendida.'
     if (!window.confirm(`¿Cancelar el plan? ${detalle} Las sesiones agendadas se cancelarán.`)) return
-    resolver(cancelarPlan(plan.id), ({ reembolsoPendiente }) =>
+    resolver(Promise.resolve(cancelarPlan(plan.id)), ({ reembolsoPendiente }) =>
       reembolsoPendiente > 0
         ? `Plan cancelado. Tu reembolso de ${formatearPrecioCLP(reembolsoPendiente)} quedó pendiente: la clínica lo registrará.`
         : 'Plan cancelado. No corresponde reembolso.')
@@ -99,6 +78,15 @@ function MisCitas() {
         <h1 className="titulo-seccion">Mis citas</h1>
         <p className="intro-seccion">Confirma tu asistencia, paga o cancela tus citas y planes desde aquí.</p>
         {mensaje && <div role="status" className={`alert alert-${mensaje.tipo}`}>{mensaje.texto}</div>}
+        {cargando && <p className="texto-ayuda" role="status">Cargando tus citas…</p>}
+        {error && (
+          <div role="alert" className="alert alert-danger d-flex flex-wrap align-items-center gap-2">
+            <span>No pudimos cargar tus citas: {error.message}</span>
+            <button type="button" className="btn btn-sm btn-outline-danger" onClick={reintentar}>Reintentar</button>
+          </div>
+        )}
+        {!cargando && !error && (
+        <>
 
         {misPlanes.length > 0 && (
           <section aria-labelledby="titulo-planes" className="mb-5">
@@ -137,9 +125,11 @@ function MisCitas() {
                           {porAgendar > 0 && (
                             <Link to={`/reservar?plan=${plan.id}`} className="btn btn-nv-primario btn-sm">Agendar sesión</Link>
                           )}
-                          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelarElPlan(plan)}>
-                            Cancelar plan
-                          </button>
+                          {!modoApi && (
+                            <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelarElPlan(plan)}>
+                              Cancelar plan
+                            </button>
+                          )}
                         </div>
                       )}
                     </article>
@@ -151,25 +141,14 @@ function MisCitas() {
         )}
 
         <h2 className="h3 mb-3">Mis citas y sesiones</h2>
-        {pendientes.length > 1 && (
-          <div className="tarjeta-formulario mb-3">
-            <p className="mb-2">
-              Tienes {pendientes.length} citas con pago pendiente. Márcalas abajo y págalas juntas en un solo pago.
+        {/* Las citas con pago pendiente también aparecen en el carrito, el único lugar para pagar varias juntas. */}
+        {pendientes.length > 0 && (
+          <div className="tarjeta-formulario mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <p className="mb-0">
+              Tienes {pendientes.length} cita(s) con pago pendiente
+              ({formatearPrecioCLP(pendientes.reduce((suma, cita) => suma + cita.precio, 0))}). Puedes pagarlas juntas desde tu carrito.
             </p>
-            <div className="d-flex flex-wrap gap-2">
-              <button type="button" className="btn btn-nv-primario btn-sm" disabled={elegidas.length === 0}
-                onClick={() => setPagandoVarias(true)}>
-                Pagar seleccionadas ({elegidas.length}) · {formatearPrecioCLP(totalElegidas)}
-              </button>
-              <button type="button" className="btn btn-nv-secundario btn-sm"
-                onClick={() => { setPorPagar(new Set(pendientes.map((c) => c.id))); setPagandoVarias(true) }}>
-                Pagar todas las pendientes · {formatearPrecioCLP(pendientes.reduce((s, c) => s + c.precio, 0))}
-              </button>
-            </div>
-            {pagandoVarias && elegidas.length > 0 && (
-              <PagoEnLinea textoBoton={`Pagar ${formatearPrecioCLP(totalElegidas)}`} onPagado={pagarVarias}
-                onCancelar={() => setPagandoVarias(false)} />
-            )}
+            <Link to="/carrito" className="btn btn-nv-primario btn-sm">Pagar en el carrito</Link>
           </div>
         )}
         {lista.length === 0 ? (
@@ -194,13 +173,6 @@ function MisCitas() {
                         {cita.motivo && <p className="texto-ayuda mb-0">Motivo: {cita.motivo}</p>}
                         {cita.reprogramaciones > 0 && (
                           <p className="texto-ayuda mb-0">Reprogramada (antes: {formatearFechaHora(cita.fechaHoraAnterior)})</p>
-                        )}
-                        {pendientes.length > 1 && citaTienePagoPendiente(cita) && (
-                          <div className="form-check mt-2">
-                            <input id={`pagar-${cita.id}`} type="checkbox" className="form-check-input"
-                              checked={porPagar.has(cita.id)} onChange={() => alternarPago(cita.id)} />
-                            <label htmlFor={`pagar-${cita.id}`} className="form-check-label">Incluir en el pago</label>
-                          </div>
                         )}
                       </div>
                       <div className="text-md-end">
@@ -251,7 +223,7 @@ function MisCitas() {
                     </div>
 
                     {pagandoId === cita.id && (
-                      <PagoEnLinea onPagado={() => pagado(cita.id)} onCancelar={() => setPagandoId(null)} />
+                      <PagoEnLinea onPagado={(tarjeta) => pagado(cita.id, tarjeta)} onCancelar={() => setPagandoId(null)} />
                     )}
                   </article>
                 </li>
@@ -267,19 +239,21 @@ function MisCitas() {
               <table className="table tabla-admin tabla-compacta align-middle">
                 <thead><tr><th>Orden</th><th>Fecha</th><th>Ítems</th><th className="text-end">Total</th><th></th></tr></thead>
                 <tbody>
-                  {misOrdenes.map((o) => (
-                    <tr key={o.id}>
-                      <td>{o.id}</td>
-                      <td>{formatearFechaHora(o.fecha)}</td>
-                      <td>{o.detalle.length}</td>
-                      <td className="text-end">{formatearPrecioCLP(o.total)}</td>
-                      <td><Link to={`/orden/${o.id}`}>Ver detalle</Link></td>
+                  {misOrdenes.map((orden) => (
+                    <tr key={orden.id}>
+                      <td>{orden.id}</td>
+                      <td>{formatearFechaHora(orden.fecha)}</td>
+                      <td>{orden.detalle.length}</td>
+                      <td className="text-end">{formatearPrecioCLP(orden.total)}</td>
+                      <td><Link to={`/orden/${orden.id}`}>Ver detalle</Link></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </section>
+        )}
+        </>
         )}
       </div>
     </section>

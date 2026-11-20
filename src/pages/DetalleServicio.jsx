@@ -1,11 +1,21 @@
 import { Link, useParams } from 'react-router-dom'
-import { servicios } from '../data/db'
+import EstadoCarga from '../components/EstadoCarga'
+import { useCarga } from '../hooks/useCarga'
+import { obtenerServicio } from '../services/catalogo'
 import { precioFinal } from '../domain/precios'
 import { formatearPrecioCLP } from '../utils/formato'
 
 function DetalleServicio() {
   const { codigo } = useParams()
-  const servicio = servicios.obtener(codigo)
+  const { datos: servicio, cargando, error, reintentar } = useCarga(() => obtenerServicio(codigo), [codigo])
+
+  if (cargando || error) {
+    return (
+      <section className="seccion">
+        <div className="container"><EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="el servicio" /></div>
+      </section>
+    )
+  }
 
   if (!servicio) {
     return (

@@ -9,7 +9,7 @@ function generarId(prefijo, ahora) {
   return prefijo + new Date(ahora).getTime().toString(36) + Math.random().toString(36).slice(2, 6)
 }
 
-const sesionesDe = (planId) => citas.listar().filter((c) => c.planId === planId)
+const sesionesDe = (planId) => citas.listar().filter((cita) => cita.planId === planId)
 
 // Una sesión de plan está cubierta por el pago del plan: no tiene precio propio (RN-13).
 function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora, motivo = '', primera = false }) {
@@ -39,16 +39,19 @@ function crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora
   return sesion
 }
 
-// Contrata el plan (pago online) y agenda su primera sesión.
-export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCorreo, codigoServicio, nutricionista = '', fechaHora, motivo = '', ordenId = null, ahora = new Date() }) {
+// Contrata el plan (pago online). La primera sesión es opcional: con `fechaHora` queda agendada
+// de inmediato; sin ella, todas las sesiones quedan por agendar desde Mis citas.
+export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCorreo, codigoServicio, nutricionista = '', fechaHora = null, motivo = '', ordenId = null, ahora = new Date() }) {
   const servicio = servicios.obtener(codigoServicio)
   if (!servicio || servicio.tipo !== TIPO_SERVICIO.PLAN) return { ok: false, motivo: 'El plan no existe.' }
   if (!servicio.sesiones) return { ok: false, motivo: 'Este plan aún no tiene sesiones definidas. Consulta con la clínica.' }
 
-  const evaluacion = evaluarReserva({ fechaHora, metodoPago: METODO_PAGO.ONLINE, esPlan: true, ahora })
-  if (!evaluacion.ok) return evaluacion
-  if (!hayDisponibilidad({ servicio, nutricionista, fechaHora, citas: citas.listar() })) {
-    return { ok: false, motivo: 'Ese horario ya no está disponible.' }
+  if (fechaHora) {
+    const evaluacion = evaluarReserva({ fechaHora, metodoPago: METODO_PAGO.ONLINE, esPlan: true, ahora })
+    if (!evaluacion.ok) return evaluacion
+    if (!hayDisponibilidad({ servicio, nutricionista, fechaHora, citas: citas.listar() })) {
+      return { ok: false, motivo: 'Ese horario ya no está disponible.' }
+    }
   }
 
   const precio = precioFinal(servicio)
@@ -69,7 +72,7 @@ export function contratarPlan({ pacienteCorreo, correoConfirmacion = pacienteCor
     creadoEn: new Date(ahora).toISOString(),
   }
   planes.crear(plan)
-  const cita = crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora, primera: true })
+  const cita = fechaHora ? crearSesion(plan, { correoConfirmacion, nutricionista, fechaHora, ahora, primera: true }) : null
   return { ok: true, plan, cita }
 }
 
@@ -103,8 +106,8 @@ export function cancelarPlan(planId, ahora = new Date()) {
 
   const reembolso = reembolsoPorCancelar(planId)
   sesionesDe(planId)
-    .filter((s) => [ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(s.estadoCita))
-    .forEach((s) => citas.actualizar(s.id, { estadoCita: ESTADO_CITA.CANCELADA }))
+    .filter((sesionPlan) => [ESTADO_CITA.POR_CONFIRMAR, ESTADO_CITA.CONFIRMADA].includes(sesionPlan.estadoCita))
+    .forEach((sesionPlan) => citas.actualizar(sesionPlan.id, { estadoCita: ESTADO_CITA.CANCELADA }))
 
   const actualizado = planes.actualizar(planId, {
     estadoPlan: ESTADO_PLAN.CANCELADO,
@@ -138,6 +141,6 @@ export function planesDePaciente(correo) {
   const buscado = String(correo).toLowerCase()
   return planes
     .listar()
-    .filter((p) => p.pacienteCorreo.toLowerCase() === buscado)
+    .filter((plan) => plan.pacienteCorreo.toLowerCase() === buscado)
     .map((plan) => ({ ...plan, resumen: resumenSesiones(plan, sesionesDe(plan.id)) }))
 }

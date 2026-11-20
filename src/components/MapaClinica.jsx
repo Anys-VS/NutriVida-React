@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MapContainer, Marker, Polyline, Popup, TileLayer } from 'react-leaflet'
-import L from 'leaflet'
+import Leaflet from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import iconoMarcador from 'leaflet/dist/images/marker-icon.png'
 import iconoMarcador2x from 'leaflet/dist/images/marker-icon-2x.png'
@@ -8,7 +8,7 @@ import sombraMarcador from 'leaflet/dist/images/marker-shadow.png'
 import { CLINICA } from '../config/clinica'
 
 // Vite no resuelve las imágenes por defecto de Leaflet; se indican explícitamente.
-const icono = L.icon({
+const icono = Leaflet.icon({
   iconUrl: iconoMarcador,
   iconRetinaUrl: iconoMarcador2x,
   shadowUrl: sombraMarcador,
@@ -19,9 +19,9 @@ const icono = L.icon({
 
 // Distancia en línea recta (fórmula del haversine), en kilómetros.
 export function distanciaKm([lat1, lon1], [lat2, lon2]) {
-  const rad = (g) => (g * Math.PI) / 180
-  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2
-  return Math.round(6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10
+  const rad = (grados) => (grados * Math.PI) / 180
+  const factorHaversine = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2
+  return Math.round(6371 * 2 * Math.atan2(Math.sqrt(factorHaversine), Math.sqrt(1 - factorHaversine)) * 10) / 10
 }
 
 function MapaClinica() {

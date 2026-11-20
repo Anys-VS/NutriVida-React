@@ -1,15 +1,25 @@
 import { Link, useParams } from 'react-router-dom'
+import EstadoCarga from '../components/EstadoCarga'
 import { useSesion } from '../context/SesionContext'
-import { ordenes } from '../data/db'
+import { useCarga } from '../hooks/useCarga'
+import { obtenerOrden } from '../services/miCarrito'
 import { formatearFechaHora, formatearPrecioCLP } from '../utils/formato'
 
 // Comprobante de una orden: una boleta con el detalle de cada cita o plan pagado.
 function OrdenConfirmada() {
   const { id } = useParams()
   const { sesion } = useSesion()
-  const orden = ordenes.obtener(id)
+  const { datos: orden, cargando, error, reintentar } = useCarga(() => obtenerOrden(id, sesion.correo), [id, sesion.correo])
 
-  if (!orden || orden.pacienteCorreo.toLowerCase() !== sesion.correo.toLowerCase()) {
+  if (cargando || error) {
+    return (
+      <section className="seccion">
+        <div className="container"><EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="tu orden" /></div>
+      </section>
+    )
+  }
+
+  if (!orden) {
     return (
       <section className="seccion">
         <div className="container">
@@ -35,9 +45,12 @@ function OrdenConfirmada() {
             </thead>
             <tbody>
               {orden.detalle.map((linea) => (
-                <tr key={linea.citaId}>
-                  <td>{linea.nombreServicio}{linea.planId && <><br /><small className="texto-ayuda">Plan: primera sesión</small></>}</td>
-                  <td>{formatearFechaHora(linea.fechaHora)}</td>
+                <tr key={linea.citaId ?? linea.planId ?? `${linea.codigoServicio}-${linea.fechaHora}`}>
+                  <td>
+                    {linea.nombreServicio}
+                    {linea.planId && <><br /><small className="texto-ayuda">{linea.fechaHora ? 'Plan: primera sesión' : 'Plan: sesiones por agendar'}</small></>}
+                  </td>
+                  <td>{linea.fechaHora ? formatearFechaHora(linea.fechaHora) : 'Por agendar'}</td>
                   <td>{linea.nutricionista || 'Por asignar'}</td>
                   <td className="text-end">{formatearPrecioCLP(linea.precio)}</td>
                 </tr>

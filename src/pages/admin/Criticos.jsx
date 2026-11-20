@@ -1,11 +1,15 @@
-import { useMemo } from 'react'
-import { citas, servicios } from '../../data/db'
+import EstadoCarga from '../../components/EstadoCarga'
 import { REGLAS } from '../../config/reglas'
 import { talleresCriticos } from '../../domain/criticos'
+import { useCarga } from '../../hooks/useCarga'
+import { cargarDatosAdministracion } from '../../services/panel'
 import { formatearFechaHora } from '../../utils/formato'
 
+// Talleres próximos con pocos cupos, calculados con las citas de ms-citas y los cupos de ms-catalogo.
 function Criticos() {
-  const lista = useMemo(() => talleresCriticos({ citas: citas.listar(), servicios: servicios.listar() }), [])
+  const { datos, cargando, error, reintentar } = useCarga(cargarDatosAdministracion)
+  if (!datos) return <EstadoCarga cargando={cargando} error={error} reintentar={reintentar} que="los cupos" />
+  const lista = talleresCriticos({ citas: datos.citas, servicios: datos.servicios })
 
   return (
     <>
@@ -19,13 +23,13 @@ function Criticos() {
           <thead><tr><th>Taller</th><th>Fecha y hora</th><th>Ocupados</th><th>Cupos restantes</th></tr></thead>
           <tbody>
             {lista.length === 0 && <tr><td colSpan={4} className="text-center">No hay talleres con cupos críticos.</td></tr>}
-            {lista.map((t) => (
-              <tr key={`${t.codigoServicio}${t.fechaHora}`}>
-                <td>{t.nombre}</td>
-                <td>{formatearFechaHora(t.fechaHora)}</td>
-                <td>{t.ocupados} de {t.cupos}</td>
-                <td><span className={`badge text-bg-${t.restantes === 0 ? 'danger' : 'warning'}`}>
-                  {t.restantes === 0 ? 'Sin cupos' : `${t.restantes} restante(s)`}
+            {lista.map((taller) => (
+              <tr key={`${taller.codigoServicio}${taller.fechaHora}`}>
+                <td>{taller.nombre}</td>
+                <td>{formatearFechaHora(taller.fechaHora)}</td>
+                <td>{taller.ocupados} de {taller.cupos}</td>
+                <td><span className={`badge text-bg-${taller.restantes === 0 ? 'danger' : 'warning'}`}>
+                  {taller.restantes === 0 ? 'Sin cupos' : `${taller.restantes} restante(s)`}
                 </span></td>
               </tr>
             ))}

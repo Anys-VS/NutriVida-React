@@ -30,7 +30,7 @@ export function validarMedicion({ fecha, peso, talla, cintura }, hoy = new Date(
   return errores
 }
 
-export const ordenarPorFecha = (mediciones = []) => [...mediciones].sort((a, b) => a.fecha.localeCompare(b.fecha))
+export const ordenarPorFecha = (mediciones = []) => [...mediciones].sort((medicionA, medicionB) => medicionA.fecha.localeCompare(medicionB.fecha))
 
 // Variación entre la primera y la última medición.
 export function resumenProgreso(mediciones = []) {
@@ -50,7 +50,7 @@ export function resumenProgreso(mediciones = []) {
   }
 }
 
-const mismoCorreo = (a, b) => String(a).toLowerCase() === String(b).toLowerCase()
+const mismoCorreo = (correoA, correoB) => String(correoA).toLowerCase() === String(correoB).toLowerCase()
 
 // Privacidad de datos de salud (caso NutriVida, sección 5): solo el paciente y su nutricionista
 // pueden ver la ficha. Es "su" nutricionista quien la tiene asignada o quien lo atiende o atendió.
@@ -60,7 +60,7 @@ export function puedeVerFicha({ sesion, pacienteCorreo, ficha, citas = [], nombr
   if (sesion.tipoUsuario !== ROL.NUTRICIONISTA || !nombreProfesional) return false
   if (ficha?.nutricionista === nombreProfesional) return true
   return citas.some(
-    (c) => mismoCorreo(c.pacienteCorreo, pacienteCorreo) && c.nutricionista === nombreProfesional && c.estadoCita !== ESTADO_CITA.CANCELADA,
+    (cita) => mismoCorreo(cita.pacienteCorreo, pacienteCorreo) && cita.nutricionista === nombreProfesional && cita.estadoCita !== ESTADO_CITA.CANCELADA,
   )
 }
 

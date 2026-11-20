@@ -13,7 +13,7 @@ function Contacto() {
   const [errores, setErrores] = useState({})
   const [resultado, setResultado] = useState(null)
 
-  const cambiar = (campo) => (e) => setValores((v) => ({ ...v, [campo]: e.target.value }))
+  const cambiar = (campo) => (evento) => setValores((anteriores) => ({ ...anteriores, [campo]: evento.target.value }))
 
   const enviar = (evento) => {
     evento.preventDefault()
