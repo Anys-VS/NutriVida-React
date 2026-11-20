@@ -1189,3 +1189,53 @@ body {
 }
 .tabla-admin.tabla-compacta { min-width: 0; }
 
+
+/* ---------- Panel interno: mismo logo que el sitio público y menú lateral con íconos ---------- */
+.marca-admin { display: inline-flex; line-height: 0; }
+.marca-admin img { width: 160px; height: auto; }
+.encabezado-admin .etiqueta-admin {
+  color: #FFFFFF;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
+  padding-left: 0.75rem;
+}
+.encabezado-admin .texto-sesion { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; }
+.rol-sesion {
+  background-color: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.15rem 0.6rem;
+}
+.menu-admin { padding: 1rem 0.75rem; }
+.menu-admin-titulo { padding: 0 0.75rem; }
+.menu-admin-titulo-cuenta { border-top: 1px solid var(--neutral-200); margin-top: 0.75rem; padding-top: 1rem; }
+.menu-admin-grupo { display: flex; flex-direction: column; gap: 0.15rem; }
+.menu-admin a {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  border-left: 3px solid transparent;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.menu-admin .icono-menu { flex-shrink: 0; color: var(--primary-900); opacity: 0.85; }
+.menu-admin a.activo { border-left-color: var(--primary-900); }
+.menu-admin a.activo .icono-menu { opacity: 1; }
+.menu-admin a:focus-visible { outline: 2px solid var(--primary-900); outline-offset: 2px; }
+
+/* En celular y tablet el menú pasa a una fila de opciones deslizable, para no empujar el contenido hacia abajo. */
+@media (max-width: 991px) {
+  .menu-admin { position: static; padding: 0.75rem; }
+  .menu-admin-titulo { display: none; }
+  .menu-admin { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: thin; }
+  .menu-admin-grupo { flex-direction: row; gap: 0.25rem; }
+  .menu-admin a { white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; border-radius: 8px; }
+  .menu-admin a.activo { border-bottom-color: var(--primary-900); }
+}
+@media (max-width: 575px) {
+  .marca-admin img { width: 130px; }
+  .encabezado-admin .etiqueta-admin { display: none; }
+}
